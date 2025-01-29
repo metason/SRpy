@@ -83,7 +83,7 @@ class TestSpatialAdjustment(unittest.TestCase):
     def test_custom_initialization(self):
         """Test custom initialization of SpatialAdjustment."""
         adjustment = SpatialAdjustment(
-            gap=0.05,
+            maxGap=0.05,
             angle=math.pi / 4,
             sector_schema=SectorSchema.fixed,
             sector_factor=2.0,

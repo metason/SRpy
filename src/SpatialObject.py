@@ -42,7 +42,7 @@ from .SpatialPredicate import (
 )
 
 
-from .BBoxSector import BBoxSector
+from .BBoxSector import BBoxSector, BBoxSectorFlags
 if TYPE_CHECKING:
     from .SpatialRelation import SpatialRelation
 
@@ -134,7 +134,7 @@ class SpatialObject:
 
     @property
     def equilateral(self) -> bool:
-        return self.long(ratio=1.1) == 0
+        return self.long_ratio() == 0
 
     @property
     def real(self) -> bool:
@@ -810,23 +810,23 @@ class SpatialObject:
             point.y <= self.height + delta and
             point.y >= -delta
         ):
-            zone.insert(SpatialTerms.i)
+            zone.insert(BBoxSectorFlags.i)
             return zone
 
         if point.x + delta > self.width / 2.0:
-            zone.insert(SpatialTerms.l)
+            zone.insert(BBoxSectorFlags.l)
         elif -point.x + delta > self.width / 2.0:
-            zone.insert(SpatialTerms.r)
+            zone.insert(BBoxSectorFlags.r)
 
         if point.z + delta > self.depth / 2.0:
-            zone.insert(SpatialTerms.a)
+            zone.insert(BBoxSectorFlags.a)
         elif -point.z + delta > self.depth / 2.0:
-            zone.insert(SpatialTerms.b)
+            zone.insert(BBoxSectorFlags.b)
 
         if point.y + delta > self.height:
-            zone.insert(SpatialTerms.o)
+            zone.insert(BBoxSectorFlags.o)
         elif point.y - delta < 0.0:
-            zone.insert(SpatialTerms.u)
+            zone.insert(BBoxSectorFlags.u)
 
         return zone
 
@@ -843,42 +843,55 @@ class SpatialObject:
             return min(self.height * self.width * self.adjustment.nearbyFactor, self.adjustment.nearbyLimit)
         return 0.0
 
-    def sectorLengths(self, sector: BBoxSector = BBoxSector.i) -> Vector3:
-        result = Vector3(self.width, self.height, self.depth)
-        if sector.contains(SpatialTerms.a) or sector.contains(SpatialTerms.b):
-            if self.adjustment.sectorSchema == SectorSchema.fixed:
-                result.z = self.adjustment.sectorFactor
-            elif self.adjustment.sectorSchema == SectorSchema.area:
-                result.z = min(self.height * self.width * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
-            elif self.adjustment.sectorSchema == SectorSchema.dimension:
-                result.z = min(self.depth * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
-            elif self.adjustment.sectorSchema == SectorSchema.perimeter:
-                result.z = min(self.height + self.width * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
-            elif self.adjustment.sectorSchema == SectorSchema.nearby:
-                result.z = min(self.nearbyRadius(), self.adjustment.sectorLimit)
-        if sector.contains(SpatialTerms.l) or sector.contains(SpatialTerms.r):
-            if self.adjustment.sectorSchema == SectorSchema.fixed:
-                result.x = self.adjustment.sectorFactor
-            elif self.adjustment.sectorSchema == SectorSchema.area:
-                result.x = min(self.height * self.depth * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
-            elif self.adjustment.sectorSchema == SectorSchema.dimension:
-                result.x = min(self.width * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
-            elif self.adjustment.sectorSchema == SectorSchema.perimeter:
-                result.x = min(self.height + self.depth * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
-            elif self.adjustment.sectorSchema == SectorSchema.nearby:
-                result.x = min(self.nearbyRadius(), self.adjustment.sectorLimit)
-        if sector.contains(SpatialTerms.o) or sector.contains(SpatialTerms.u):
-            if self.adjustment.sectorSchema == SectorSchema.fixed:
-                result.y = self.adjustment.sectorFactor
-            elif self.adjustment.sectorSchema == SectorSchema.area:
-                result.y = min(self.width * self.depth * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
-            elif self.adjustment.sectorSchema == SectorSchema.dimension:
-                result.y = min(self.height * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
-            elif self.adjustment.sectorSchema == SectorSchema.perimeter:
-                result.y = min(self.width + self.depth * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
-            elif self.adjustment.sectorSchema == SectorSchema.nearby:
-                result.y = min(self.nearbyRadius(), self.adjustment.sectorLimit)
-        return result
+    def sector_lengths(self, sector: BBoxSector = BBoxSector(BBoxSectorFlags.i)) -> Vector3:
+            """
+            Calculate the sector lengths based on the provided sector.
+
+            Args:
+                sector (BBoxSector, optional): The sector to calculate lengths for. Defaults to inside sector.
+
+            Returns:
+                Vector3: The lengths in x, y, z directions.
+            """
+            result = Vector3(x=self.width, y=self.height, z=self.depth)
+            
+            if sector.contains(BBoxSectorFlags.a) or sector.contains(BBoxSectorFlags.b):
+                if self.adjustment.sectorSchema == "fixed":
+                    result.z = self.adjustment.sectorFactor
+                elif self.adjustment.sectorSchema == "area":
+                    result.z = min(self.height * self.width * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
+                elif self.adjustment.sectorSchema == "dimension":
+                    result.z = min(self.depth * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
+                elif self.adjustment.sectorSchema == "perimeter":
+                    result.z = min((self.height + self.width) * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
+                elif self.adjustment.sectorSchema == "nearby":
+                    result.z = min(self.nearby_radius(), self.adjustment.sectorLimit)
+            
+            if sector.contains(BBoxSectorFlags.l) or sector.contains(BBoxSectorFlags.r):
+                if self.adjustment.sectorSchema == "fixed":
+                    result.x = self.adjustment.sectorFactor
+                elif self.adjustment.sectorSchema == "area":
+                    result.x = min(self.height * self.depth * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
+                elif self.adjustment.sectorSchema == "dimension":
+                    result.x = min(self.width * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
+                elif self.adjustment.sectorSchema == "perimeter":
+                    result.x = min((self.height + self.depth) * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
+                elif self.adjustment.sectorSchema == "nearby":
+                    result.x = min(self.nearby_radius(), self.adjustment.sectorLimit)
+            
+            if sector.contains(BBoxSectorFlags.o) or sector.contains(BBoxSectorFlags.u):
+                if self.adjustment.sectorSchema == "fixed":
+                    result.y = self.adjustment.sectorFactor
+                elif self.adjustment.sectorSchema == "area":
+                    result.y = min(self.width * self.depth * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
+                elif self.adjustment.sectorSchema == "dimension":
+                    result.y = min(self.height * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
+                elif self.adjustment.sectorSchema == "perimeter":
+                    result.y = min((self.width + self.depth) * self.adjustment.sectorFactor, self.adjustment.sectorLimit)
+                elif self.adjustment.sectorSchema == "nearby":
+                    result.y = min(self.nearby_radius(), self.adjustment.sectorLimit)
+            
+            return result
 
     # Topologies Method
     def topologies(self, subject: 'SpatialObject') -> List['SpatialRelation']:

@@ -1,11 +1,7 @@
 # tests/BBoxSector_test.py
 
 import unittest
-from enum import IntFlag
-
-# Assuming BBoxSector is defined in src/BBoxSector.py
-# Adjust the import path as necessary based on your project structure
-from src.BBoxSector import BBoxSector
+from src.BBoxSector import BBoxSector, BBoxSectorFlags
 
 class TestBBoxSector(unittest.TestCase):
     def test_str_representation_basic(self):
@@ -43,10 +39,13 @@ class TestBBoxSector(unittest.TestCase):
 
     def test_str_representation_invalid(self):
         """Test the string representation of an undefined sector."""
-        # Original expectation was "no sector", but with corrected __str__,
-        # it should list all set flags as "a+b+l+r"
-        undefined_sector = BBoxSector.a | BBoxSector.b | BBoxSector.l | BBoxSector.r
-        self.assertEqual(str(undefined_sector), "a+b+l+r")  # Fixed expectation
+        # Create a combined sector not predefined
+        undefined_sector = BBoxSector()  # Start with none
+        undefined_sector.insert(BBoxSectorFlags.a)
+        undefined_sector.insert(BBoxSectorFlags.b)
+        undefined_sector.insert(BBoxSectorFlags.l)
+        undefined_sector.insert(BBoxSectorFlags.r)
+        self.assertEqual(str(undefined_sector), "a+b+l+r")
 
     def test_divergencies_inside(self):
         """Test divergencies method for the 'inside' sector."""
@@ -90,26 +89,26 @@ class TestBBoxSector(unittest.TestCase):
 
     def test_composite_sector_flags(self):
         """Test that composite sectors have the correct flags set."""
-        self.assertTrue(BBoxSector.al & BBoxSector.a)
-        self.assertTrue(BBoxSector.al & BBoxSector.l)
-        self.assertFalse(BBoxSector.al & BBoxSector.o)
+        self.assertTrue(BBoxSector.al.contains(BBoxSectorFlags.a))
+        self.assertTrue(BBoxSector.al.contains(BBoxSectorFlags.l))
+        self.assertFalse(BBoxSector.al.contains(BBoxSectorFlags.o))
 
-        self.assertTrue(BBoxSector.alo & BBoxSector.a)
-        self.assertTrue(BBoxSector.alo & BBoxSector.l)
-        self.assertTrue(BBoxSector.alo & BBoxSector.o)
+        self.assertTrue(BBoxSector.alo.contains(BBoxSectorFlags.a))
+        self.assertTrue(BBoxSector.alo.contains(BBoxSectorFlags.l))
+        self.assertTrue(BBoxSector.alo.contains(BBoxSectorFlags.o))
 
-        self.assertTrue(BBoxSector.bru & BBoxSector.b)
-        self.assertTrue(BBoxSector.bru & BBoxSector.r)
-        self.assertTrue(BBoxSector.bru & BBoxSector.u)
+        self.assertTrue(BBoxSector.bru.contains(BBoxSectorFlags.b))
+        self.assertTrue(BBoxSector.bru.contains(BBoxSectorFlags.r))
+        self.assertTrue(BBoxSector.bru.contains(BBoxSectorFlags.u))
 
     def test_composite_sector_values(self):
         """Test that composite sectors have the correct integer values."""
         # Verify that al is a | l
-        self.assertEqual(BBoxSector.al, BBoxSector.a | BBoxSector.l)
+        self.assertEqual(BBoxSector.al.flags, BBoxSectorFlags.a | BBoxSectorFlags.l)
         # Verify that alo is a | l | o
-        self.assertEqual(BBoxSector.alo, BBoxSector.a | BBoxSector.l | BBoxSector.o)
+        self.assertEqual(BBoxSector.alo.flags, BBoxSectorFlags.a | BBoxSectorFlags.l | BBoxSectorFlags.o)
         # Verify that bru is b | r | u
-        self.assertEqual(BBoxSector.bru, BBoxSector.b | BBoxSector.r | BBoxSector.u)
+        self.assertEqual(BBoxSector.bru.flags, BBoxSectorFlags.b | BBoxSectorFlags.r | BBoxSectorFlags.u)
 
     def test_none_sector(self):
         """Test the 'none' sector's properties."""
@@ -118,6 +117,7 @@ class TestBBoxSector(unittest.TestCase):
 
     def test_combined_sectors(self):
         """Test multiple combined sectors and their properties."""
+        # Combine sectors using the | operator
         sector = BBoxSector.a | BBoxSector.l
         self.assertEqual(str(sector), "al")
         self.assertEqual(sector.divergencies(), 2)
@@ -134,8 +134,7 @@ class TestBBoxSector(unittest.TestCase):
         """Test an invalid combination that is not predefined."""
         # Creating an undefined combination: a | b | l
         sector = BBoxSector.a | BBoxSector.b | BBoxSector.l
-        # Original expectation was "no sector", but now it should be "a+b+l"
-        self.assertEqual(str(sector), "a+b+l")  # Fixed expectation
+        self.assertEqual(str(sector), "a+b+l")
         self.assertEqual(sector.divergencies(), 3)
 
     def test_only_two_flags_set(self):
