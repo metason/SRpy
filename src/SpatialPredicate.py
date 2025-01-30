@@ -71,6 +71,7 @@ class SpatialPredicate(Enum):
     samecuboid = "same cuboid"
     congruent = "congruent"          # A is congruent to B, similar w,h,d, center and orientation, identical
     sameshape = "same shape"
+    samesurface = "samesurface"
     # samecause is commented out
     # VISIBILITY
     # perspectives: seen from user / observer
@@ -172,6 +173,13 @@ class SpatialTerms:
         PredicateTerm(code=SpatialPredicate.behind, predicate="behind", preposition="", synonym="after"),
         PredicateTerm(code=SpatialPredicate.above, predicate="above", preposition="", synonym="over", reverse="below"),
         PredicateTerm(code=SpatialPredicate.below, predicate="below", preposition="", synonym="under", reverse="above"),
+        
+        PredicateTerm(code=SpatialPredicate.l, predicate="left", preposition="of", synonym="to the left"),
+        PredicateTerm(code=SpatialPredicate.r, predicate="right", preposition="of", synonym="to the right"),
+        PredicateTerm(code=SpatialPredicate.a, predicate="ahead", preposition="of", synonym="before"),
+        PredicateTerm(code=SpatialPredicate.b, predicate="behind", preposition="", synonym="after"),
+        PredicateTerm(code=SpatialPredicate.o, predicate="above", preposition="", synonym="over", reverse="below"),
+        PredicateTerm(code=SpatialPredicate.u, predicate="below", preposition="", synonym="under", reverse="above"),
         # adjacency in OCS
         PredicateTerm(code=SpatialPredicate.ontop, predicate="on top", preposition="of", synonym="at the top", reverse="beneath"),
         PredicateTerm(code=SpatialPredicate.beneath, predicate="beneath", preposition="", synonym="underneath", reverse="on top"),

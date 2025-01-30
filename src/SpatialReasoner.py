@@ -37,8 +37,9 @@ from src.SpatialPredicate import (
     geography,
     sectors,
 )
-from SpatialObject import SpatialObject
+from .SpatialObject import SpatialObject
 from .SpatialRelation import SpatialRelation
+from .SpatialInference import SpatialInference
 
 
 class SpatialReasoner:

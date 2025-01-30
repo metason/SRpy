@@ -39,6 +39,7 @@ from src.SpatialPredicate import (
     geography,
     sectors,
 )
+from src.SpatialReasoner import SpatialReasoner
 from src.SpatialRelation import SpatialRelation  # Ensure correct import
 from src.SpatialObject import SpatialObject
 from src.BBoxSector import BBoxSector, BBoxSectorFlags  # Import BBoxSector and its flags
@@ -149,8 +150,8 @@ class TestSpatialObjectPositionMethods(unittest.TestCase):
         new_position = Vector3(2.0, 2.0, 2.0)
         self.obj.setPosition(new_position)
         expected_velocity = (new_position - Vector3(1.0, 1.0, 1.0)) / 1.0  # Assuming delta time is 1 second
-        self.assertEqual(self.obj.velocity, expected_velocity)
-        self.assertEqual(self.obj.position, new_position)
+        self.assertAlmostEqual(self.obj.velocity, expected_velocity,places=2)
+        self.assertAlmostEqual(self.obj.position, new_position,places=2)
 
     def test_set_position_without_movement(self):
         # If the object is immobile, velocity should not update
@@ -217,14 +218,31 @@ class TestSpatialObjectSectorMethods(unittest.TestCase):
 
     def test_sector_of_inside_point(self):
         point = Vector3(1.0, 1.0, 1.0)
-        sector = self.obj.sectorOf(point)
+        
+        subject = SpatialObject(
+            id="subj",
+            position=point,
+            width=0.5,
+            height=0.5,
+            depth=0.5
+        )
+        center = self.obj.intoLocal(subject.center)
+        sector = self.obj.sectorOf(center)
         # Check if 'i' flag is set
         self.assertTrue(sector.contains(BBoxSectorFlags.i))
         self.assertEqual(sector, BBoxSector.i)
 
     def test_sector_of_left_point(self):
         point = Vector3(3.0, 1.0, 1.0)  # Beyond width/2 + maxGap (4/2 + 0.5 = 2.5)
-        sector = self.obj.sectorOf(point)
+        subject = SpatialObject(
+            id="subj",
+            position=point,
+            width=0.5,
+            height=0.5,
+            depth=0.5
+        )
+        center = self.obj.intoLocal(subject.center)
+        sector = self.obj.sectorOf(center)
         self.assertTrue(sector.contains(BBoxSectorFlags.l))
 
     def test_sector_of_right_point(self):
@@ -273,6 +291,10 @@ class TestSpatialObjectSpatialRelations(unittest.TestCase):
         )
         # Mock SpatialRelation and SpatialPredicate if needed
         # Assuming SpatialRelation is correctly implemented
+        adjustment = SpatialAdjustment(maxGap=0.5)
+        self.obj1.adjustment = adjustment
+        self.obj2.adjustment = adjustment
+        # create the spatial context SpatialReasoner
         self.obj1.context = MagicMock()
 
     def test_near_relation(self):

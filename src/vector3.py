@@ -21,7 +21,13 @@ class Vector3:
         return Vector3(*(self.array + other.array))
     
     def __sub__(self, other):
+        #if other is not Vector3 but number
+        if not isinstance(other, Vector3):
+            return Vector3(*(self.array - other))
         return Vector3(*(self.array - other.array))
+    def __truediv__(self, other):
+        return Vector3(*(self.array / other))
+
     
     def dot(self, other):
         return np.dot(self.array, other.array)

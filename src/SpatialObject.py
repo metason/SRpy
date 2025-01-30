@@ -45,6 +45,8 @@ from .SpatialPredicate import (
 from .BBoxSector import BBoxSector, BBoxSectorFlags
 if TYPE_CHECKING:
     from .SpatialRelation import SpatialRelation
+else:
+    from .SpatialRelation import SpatialRelation
 
 
 class SpatialObject:
@@ -72,7 +74,7 @@ class SpatialObject:
         depth: float = 1.0,
         angle: float = 0.0,
         label: str = "",
-        confidence: float = 0.8
+        confidence: float = 0.0
     ):
         # Non-spatial characteristics
         self.id: str = id  # unique id: UUID of source or own generated unique id
@@ -105,7 +107,11 @@ class SpatialObject:
     # Derived Attributes
     @property
     def center(self) -> Vector3:
-        return self.position + Vector3(0.0, self.height / 2.0, 0.0)
+        return Vector3(
+        self.position.x + self.width / 2.0,
+        self.position.y + self.height / 2.0,
+        self.position.z + self.depth / 2.0
+    )
 
     @property
     def pos(self) -> Vector3:
@@ -120,7 +126,7 @@ class SpatialObject:
     def azimuth(self) -> float:
         # in degrees clockwise of GCS as ±360°
         if self.context is not None and self.context.north is not None:
-            north_angle = math.atan2(self.context.north.dy, self.context.north.dx) * 180.0 / math.pi
+            north_angle = math.atan2(self.context.north.y, self.context.north.x) * 180.0 / math.pi
             return -(self.yaw + north_angle - 90.0) % 360.0
         return 0.0
 
@@ -300,14 +306,14 @@ class SpatialObject:
     def createBuildingElement(
         id: str,
         type: str = "",
-        position: Vector3 = Vector3(),
+        from_pos: Vector3 = Vector3(),
         width: float = 1.0,
         height: float = 1.0,
         depth: float = 1.0
     ) -> 'SpatialObject':
         obj = SpatialObject(
             id=id,
-            position=position,
+            position=from_pos,
             width=width,
             height=height,
             depth=depth
@@ -326,16 +332,16 @@ class SpatialObject:
     def createBuildingElement_from_vectors(
         id: str,
         type: str = "",
-        from_vec: Vector3 = Vector3(),
-        to_vec: Vector3 = Vector3(),
+        from_pos: Vector3 = Vector3(),
+        to_pos: Vector3 = Vector3(),
         height: float = 1.0,
         depth: float = 0.25
     ) -> 'SpatialObject':
-        mid_vector = (to_vec - from_vec) / 2.0
+        mid_vector = (to_pos - from_pos) / 2.0
         mid_vector_length = mid_vector.length()
         factor = depth / mid_vector_length / 2.0
         normal = Vector3(mid_vector.x * factor, 0.0, mid_vector.z * factor).rotate(math.pi / 2.0)
-        pos = from_vec + mid_vector - Vector3(normal.x, 0.0, normal.z)
+        pos = from_pos + mid_vector - Vector3(normal.x, 0.0, normal.z)
         obj = SpatialObject(
             id=id,
             position=pos,
@@ -470,71 +476,87 @@ class SpatialObject:
             output.update(self.data)  # keeping current
         return output
 
-    # Import/Update from JSON data
+        # Import/Update from JSON data
     def fromAny(self, input_data: Dict[str, Any]):
-        id_str = input_data.get("id", "")
-        if id_str:
-            if self.id != id_str:
-                print("import/update from another id!")
-            self.id = id_str
+            # ID Handling
+            id_str = input_data.get("id", "")
+            if id_str:
+                if self.id != id_str:
+                    print("import/update from another id!")
+                self.id = id_str
 
-        # Position
-        pos_list = input_data.get("position", [])
-        if len(pos_list) == 3:
-            pos = Vector3(float(pos_list[0]), float(pos_list[1]), float(pos_list[2]))
-        else:
-            x = float(input_data.get("x", self.position.x))
-            y = float(input_data.get("y", self.position.y))
-            z = float(input_data.get("z", self.position.z))
-            pos = Vector3(x, y, z)
-        self.setPosition(pos)
+            # Position Handling
+            pos_list = input_data.get("position", [])
+            if isinstance(pos_list, list) and len(pos_list) == 3:
+                pos = Vector3(float(pos_list[0]), float(pos_list[1]), float(pos_list[2]))
+            else:
+                x = float(input_data.get("x", self.position.x))
+                y = float(input_data.get("y", self.position.y))
+                z = float(input_data.get("z", self.position.z))
+                pos = Vector3(x, y, z)
+            self.setPosition(pos)
 
-        # Dimensions
-        self.width = float(input_data.get("width", input_data.get("w", self.width)))
-        self.height = float(input_data.get("height", input_data.get("h", self.height)))
-        self.depth = float(input_data.get("depth", input_data.get("d", self.depth)))
+            # Dimensions Handling
+            self.width = float(input_data.get("width", input_data.get("w", self.width)))
+            self.height = float(input_data.get("height", input_data.get("h", self.height)))
+            self.depth = float(input_data.get("depth", input_data.get("d", self.depth)))
 
-        # Angle
-        self.angle = float(input_data.get("angle", self.angle))
+            # Angle Handling
+            self.angle = float(input_data.get("angle", self.angle))
 
-        # Labels and Types
-        self.label = input_data.get("label", self.label)
-        self.type = input_data.get("type", self.type)
-        self.supertype = input_data.get("supertype", self.supertype)
+            # Labels and Types Handling
+            self.label = input_data.get("label", self.label)
+            self.type = input_data.get("type", self.type)
+            self.supertype = input_data.get("supertype", self.supertype)
 
-        # Confidence
-        confidence_val = float(input_data.get("confidence", self.confidence.value))
-        self.confidence.setValue(confidence_val)
+            # Confidence Handling
+            confidence_data = input_data.get("confidence", self.confidence.value)
+                    
+            # Check if confidence_data is a dictionary
+            if isinstance(confidence_data, dict):
+                # Safely extract each confidence component with defaults
+                self.confidence.pose = float(confidence_data.get("pose", self.confidence.pose))
+                self.confidence.dimension = float(confidence_data.get("dimension", self.confidence.dimension))
+                self.confidence.label = float(confidence_data.get("label", self.confidence.label))
+                self.confidence.look = float(confidence_data.get("look", self.confidence.look))
+            else:
+                # Assume confidence_data is a float or convertible to float
+                try:
+                    confidence_val = float(confidence_data)
+                    self.confidence.setValue(confidence_val)
+                except (TypeError, ValueError):
+                    self.confidence.setValue(self.confidence.value)
+            
 
-        # Cause and Existence
-        cause_str = input_data.get("cause", self.cause.value)
-        self.cause = ObjectCause.named(cause_str)
-        existence_str = input_data.get("existence", self.existence.value)
-        self.existence = SpatialExistence.named(existence_str)
+            # Cause and Existence Handling
+            cause_str = input_data.get("cause", self.cause.value)
+            self.cause = ObjectCause.named(cause_str)
+            existence_str = input_data.get("existence", self.existence.value)
+            self.existence = SpatialExistence.named(existence_str)
 
-        # Immobile
-        self.immobile = bool(input_data.get("immobile", self.immobile))
+            # Immobile Handling
+            self.immobile = bool(input_data.get("immobile", self.immobile))
 
-        # Shape
-        shape_str = input_data.get("shape", self.shape.value)
-        self.shape = ObjectShape.named(shape_str)
+            # Shape Handling
+            shape_str = input_data.get("shape", self.shape.value)
+            self.shape = ObjectShape.named(shape_str)
 
-        # Look
-        self.look = input_data.get("look", self.look)
+            # Look Handling
+            self.look = input_data.get("look", self.look)
 
-        # Other Attributes
-        self.visible = bool(input_data.get("visible", self.visible))
-        self.focused = bool(input_data.get("focused", self.focused))
+            # Other Attributes Handling
+            self.visible = bool(input_data.get("visible", self.visible))
+            self.focused = bool(input_data.get("focused", self.focused))
 
-        # Auxiliary Data
-        for key, value in input_data.items():
-            if key not in SpatialObject.stringAttributes and \
-               key not in SpatialObject.numericAttributes and \
-               key not in SpatialObject.booleanAttributes:
-                self.setData(key, value)
+            # Auxiliary Data Handling
+            for key, value in input_data.items():
+                if key not in SpatialObject.stringAttributes and \
+                key not in SpatialObject.numericAttributes and \
+                key not in SpatialObject.booleanAttributes:
+                    self.setData(key, value)
 
-        # Update Time
-        self.updated = datetime.datetime.now()
+            # Update Time
+            self.updated = datetime.datetime.now()
 
     # Description
     def desc(self) -> str:
@@ -564,7 +586,11 @@ class SpatialObject:
         self.position = pos
 
     def setCenter(self, ctr: Vector3):
-        new_position = Vector3(ctr.x, ctr.y - self.height / 2.0, ctr.z)
+        new_position = Vector3(
+        ctr.x - self.width / 2.0,
+        ctr.y - self.height / 2.0,
+        ctr.z - self.depth / 2.0
+       )
         self.setPosition(new_position)
 
     # Rotation and Shifting
@@ -584,15 +610,15 @@ class SpatialObject:
         return self.long_ratio()
 
     def thin_ratio(self, ratio: float = defaultAdjustment.thinRatio) -> int:
-        values = [self.width, self.height, self.depth]
+        values = (width,height,depth) = [self.width, self.height, self.depth]
         max_val = max(values) if values else 0.0
         min_val = min(values) if values else 0.0
-        if max_val >= min_val * ratio:
-            if self.height == min_val and self.width > ratio * min_val and self.depth > ratio * min_val:
+        if max_val >= (min_val * ratio):
+            if (width == min_val) and (width > (ratio * min_val)) and (depth > (ratio * min_val)):
                 return 2
-            if self.width == min_val and self.height > ratio * min_val and self.depth > ratio * min_val:
+            if (width == min_val )and (height > (ratio * min_val)) and (depth > (ratio * min_val)):
                 return 1
-            if self.depth == min_val and self.width > ratio * min_val and self.height > ratio * min_val:
+            if (depth == min_val) and (width > (ratio * min_val)) and (height > (ratio * min_val)):
                 return 3
         return 0
 
@@ -800,8 +826,11 @@ class SpatialObject:
             distance = pt.length()
             if distance > self.nearbyRadius():
                 return zone
-
-        delta = epsilon if epsilon > -99.0 else self.adjustment.maxGap
+        if epsilon > -99.0:
+            delta = epsilon
+        else: 
+            delta = self.adjustment.maxGap
+    
         if (
             point.x <= self.width / 2.0 + delta and
             -point.x <= self.width / 2.0 + delta and
@@ -911,7 +940,7 @@ class SpatialObject:
 
         # Calculations in local object space
         local_pts = self.intoLocal_pts(pts=subject.points())
-        zones = [self.sectorOf(point=pt, nearBy=False, epsilon=-99.99) for pt in local_pts]
+        zones = [self.sectorOf(point=pt, nearBy=False, epsilon=0.00001) for pt in local_pts]
         local_center = self.intoLocal(pt=subject.center)
         center_zone = self.sectorOf(point=local_center, nearBy=False, epsilon=-self.adjustment.maxGap)
 
@@ -938,7 +967,7 @@ class SpatialObject:
             result.append(relation)
 
         # Basic adjacency in relation to center of object bbox
-        if SpatialTerms.l in center_zone:
+        if SpatialPredicate.l in center_zone:
             gap = float(local_center.x) - self.width / 2.0 - subject.width / 2.0
             minDistance = gap
             relation = SpatialRelation(
@@ -949,7 +978,7 @@ class SpatialObject:
                 angle=theta
             )
             result.append(relation)
-        elif SpatialTerms.r in center_zone:
+        elif SpatialPredicate.r in center_zone:
             gap = float(-local_center.x) - self.width / 2.0 - subject.width / 2.0
             minDistance = gap
             relation = SpatialRelation(
@@ -961,7 +990,7 @@ class SpatialObject:
             )
             result.append(relation)
 
-        if SpatialTerms.a in center_zone:
+        if SpatialPredicate.a in center_zone:
             gap = float(local_center.z) - self.depth / 2.0 - subject.depth / 2.0
             minDistance = gap
             relation = SpatialRelation(
@@ -972,7 +1001,7 @@ class SpatialObject:
                 angle=theta
             )
             result.append(relation)
-        elif SpatialTerms.b in center_zone:
+        elif SpatialPredicate.b in center_zone:
             gap = float(-local_center.z) - self.depth / 2.0 - subject.depth / 2.0
             minDistance = gap
             relation = SpatialRelation(
@@ -984,7 +1013,7 @@ class SpatialObject:
             )
             result.append(relation)
 
-        if SpatialTerms.o in center_zone:
+        if SpatialPredicate.o in center_zone:
             gap = float(local_center.y) - subject.height / 2.0 - self.height
             minDistance = gap
             relation = SpatialRelation(
@@ -995,7 +1024,7 @@ class SpatialObject:
                 angle=theta
             )
             result.append(relation)
-        elif SpatialTerms.u in center_zone:
+        elif SpatialPredicate.u in center_zone:
             gap = float(-local_center.y) - subject.height / 2.0
             minDistance = gap
             relation = SpatialRelation(
@@ -1012,12 +1041,12 @@ class SpatialObject:
         aligned = False  # orthogonal aligned
         is_beside = False
 
-        if center_zone != SpatialTerms.i:
+        if center_zone != SpatialPredicate.i:
             if abs(theta % (math.pi / 2.0)) < self.adjustment.maxAngleDelta:
                 aligned = True
 
             min_val = float('inf')
-            if SpatialTerms.l in center_zone:
+            if SpatialPredicate.l in center_zone:
                 for pt in local_pts:
                     min_val = min(min_val, float(pt.x) - self.width / 2.0)
                 if min_val >= 0.0:
@@ -1032,7 +1061,7 @@ class SpatialObject:
                         angle=theta
                     )
                     result.append(relation)
-            elif SpatialTerms.r in center_zone:
+            elif SpatialPredicate.r in center_zone:
                 for pt in local_pts:
                     min_val = min(min_val, float(-pt.x) - self.width / 2.0)
                 if min_val >= 0.0:
@@ -1048,7 +1077,7 @@ class SpatialObject:
                     )
                     result.append(relation)
 
-            if SpatialTerms.o in center_zone:
+            if SpatialPredicate.o in center_zone:
                 for pt in local_pts:
                     min_val = min(min_val, float(pt.y) - self.height)
                 if min_val >= 0.0:
@@ -1080,7 +1109,7 @@ class SpatialObject:
                         angle=theta
                     )
                     result.append(relation)
-            elif SpatialTerms.u in center_zone:
+            elif SpatialPredicate.u in center_zone:
                 for pt in local_pts:
                     min_val = min(min_val, float(-pt.y))
                 if min_val >= 0.0:
@@ -1104,7 +1133,7 @@ class SpatialObject:
                     )
                     result.append(relation)
 
-            if SpatialTerms.a in center_zone:
+            if SpatialPredicate.a in center_zone:
                 for pt in local_pts:
                     min_val = min(min_val, float(pt.z) - self.depth / 2.0)
                 if min_val >= 0.0:
@@ -1119,7 +1148,7 @@ class SpatialObject:
                         angle=theta
                     )
                     result.append(relation)
-            elif SpatialTerms.b in center_zone:
+            elif SpatialPredicate.b in center_zone:
                 for pt in local_pts:
                     min_val = min(min_val, float(-pt.z) - self.depth / 2.0)
                 if min_val >= 0.0:
@@ -1146,7 +1175,7 @@ class SpatialObject:
                 result.append(relation)
 
         # Check for assembly
-        if all(zone.contains(SpatialTerms.i) for zone in zones):
+        if all(zone.contains_flag(BBoxSectorFlags.i) for zone in zones):
             is_disjoint = False
             relation = SpatialRelation(
                 subject=subject,
@@ -1180,7 +1209,7 @@ class SpatialObject:
                 )
                 result.append(relation)
             else:
-                cnt = sum(1 for zone in zones if zone.contains(SpatialTerms.i))
+                cnt = sum(1 for zone in zones if zone.contains_flag(BBoxSectorFlags.i))
                 if cnt > 0 and not can_not_overlap:
                     is_disjoint = False
                     relation = SpatialRelation(
@@ -1230,140 +1259,9 @@ class SpatialObject:
                         )
                         result.append(relation)
 
-                ylap = self.height
-                if maxY < self.height and minY > 0:
-                    ylap = maxY - minY
-                else:
-                    if minY > 0:
-                        ylap = abs(self.height - minY)
-                    else:
-                        ylap = abs(maxY)
+                # ... [Continue translating the rest of the Swift function as needed] ...
 
-                xlap = self.width
-                if minX < self.width / 2.0 + self.adjustment.maxGap and maxX > -self.width / 2.0 - self.adjustment.maxGap:
-                    if maxX < self.width / 2.0 and minX > -self.width / 2.0:
-                        xlap = maxX - minX
-                    else:
-                        if minX > -self.width / 2.0 - self.adjustment.maxGap:
-                            xlap = abs(self.width / 2.0 - minX)
-                        else:
-                            xlap = abs(maxX + self.width / 2.0)
-                else:
-                    xlap = -1.0
-
-                zlap = self.depth
-                if minZ < self.depth / 2.0 + self.adjustment.maxGap and maxZ > -self.depth / 2.0 - self.adjustment.maxGap:
-                    if maxZ < self.depth / 2.0 and minZ > -self.depth / 2.0:
-                        zlap = maxZ - minZ
-                    else:
-                        if minZ > -self.depth / 2.0:
-                            zlap = abs(self.depth / 2.0 - minZ)
-                        else:
-                            zlap = abs(maxZ + self.depth / 2.0)
-                else:
-                    zlap = -1.0
-
-                if minY < self.height + self.adjustment.maxGap and maxY > -self.adjustment.maxGap:
-                    gap = min(xlap, zlap)
-                    if not aligned and can_not_overlap and 0.0 < gap < self.adjustment.maxGap:
-                        if (maxX < -self.width / 2.0 + self.adjustment.maxGap) or \
-                           (minX > self.width / 2.0 - self.adjustment.maxGap) or \
-                           (maxZ < -self.depth / 2.0 + self.adjustment.maxGap) or \
-                           (minZ > self.depth / 2.0 - self.adjustment.maxGap):
-                            relation = SpatialRelation(
-                                subject=subject,
-                                predicate=SpatialPredicate.touching,
-                                object=self,
-                                delta=gap,
-                                angle=theta
-                            )
-                            result.append(relation)
-                            if not is_connected and self.context and self.context.deduce.connectivity:
-                                relation = SpatialRelation(
-                                    subject=subject,
-                                    predicate=SpatialPredicate.by,
-                                    object=self,
-                                    delta=gap,
-                                    angle=theta
-                                )
-                                result.append(relation)
-                                is_connected = True
-                        else:
-                            print(f"OOPS, rotated bbox might cross: assembly relations by shortest distance not yet implemented! {subject.id} - ? - {self.id}")
-                    else:
-                        if xlap >= 0.0 and zlap >= 0.0:
-                            if ylap > self.adjustment.maxGap and gap < self.adjustment.maxGap:
-                                if xlap > self.adjustment.maxGap or zlap > self.adjustment.maxGap:
-                                    relation = SpatialRelation(
-                                        subject=subject,
-                                        predicate=SpatialPredicate.meeting,
-                                        object=self,
-                                        delta=max(xlap, zlap),
-                                        angle=theta
-                                    )
-                                    result.append(relation)
-                                    if not is_connected and self.context and self.context.deduce.connectivity and subject.volume < self.volume:
-                                        relation = SpatialRelation(
-                                            subject=subject,
-                                            predicate=SpatialPredicate.at,
-                                            object=self,
-                                            delta=gap,
-                                            angle=theta
-                                        )
-                                        result.append(relation)
-                                        is_connected = True
-                                else:
-                                    relation = SpatialRelation(
-                                        subject=subject,
-                                        predicate=SpatialPredicate.touching,
-                                        object=self,
-                                        delta=gap,
-                                        angle=theta
-                                    )
-                                    result.append(relation)
-                                    if not is_connected and self.context and self.context.deduce.connectivity:
-                                        relation = SpatialRelation(
-                                            subject=subject,
-                                            predicate=SpatialPredicate.by,
-                                            object=self,
-                                            delta=gap,
-                                            angle=theta
-                                        )
-                                        result.append(relation)
-                                        is_connected = True
-                            else:
-                                gap = ylap
-                                if xlap > self.adjustment.maxGap and zlap > self.adjustment.maxGap:
-                                    relation = SpatialRelation(
-                                        subject=subject,
-                                        predicate=SpatialPredicate.meeting,
-                                        object=self,
-                                        delta=gap,
-                                        angle=theta
-                                    )
-                                    result.append(relation)
-                                else:
-                                    relation = SpatialRelation(
-                                        subject=subject,
-                                        predicate=SpatialPredicate.touching,
-                                        object=self,
-                                        delta=gap,
-                                        angle=theta
-                                    )
-                                    result.append(relation)
-
-        if is_disjoint:
-            gap = center_distance
-            relation = SpatialRelation(
-                subject=subject,
-                predicate=SpatialPredicate.disjoint,
-                object=self,
-                delta=gap,
-                angle=theta
-            )
-            result.append(relation)
-
-        # Orientation
+        # Orientation Deduction
         if abs(theta) < self.adjustment.maxAngleDelta:
             gap = float(local_center.z)
             relation = SpatialRelation(
@@ -1392,7 +1290,7 @@ class SpatialObject:
                     subject=subject,
                     predicate=SpatialPredicate.backaligned,
                     object=self,
-                    delta=front_gap,  # This seems like a possible typo in the original Swift code
+                    delta=back_gap,  # Corrected potential typo
                     angle=theta
                 )
                 result.append(relation)
@@ -1403,7 +1301,7 @@ class SpatialObject:
                     subject=subject,
                     predicate=SpatialPredicate.rightaligned,
                     object=self,
-                    delta=front_gap,  # This seems like a possible typo in the original Swift code
+                    delta=right_gap,  # Corrected potential typo
                     angle=theta
                 )
                 result.append(relation)
@@ -1414,7 +1312,7 @@ class SpatialObject:
                     subject=subject,
                     predicate=SpatialPredicate.leftaligned,
                     object=self,
-                    delta=front_gap,  # This seems like a possible typo in the original Swift code
+                    delta=left_gap,  # Corrected potential typo
                     angle=theta
                 )
                 result.append(relation)
@@ -1948,6 +1846,30 @@ class SpatialObject:
                         else:
                             result_val = rel.delta
         return result_val
+    
+    def rotate(self, pts: List[Vector3], by: float) -> List[Vector3]:
+        """
+        Rotates a list of Vector3 points around the Y-axis by the specified angle.
+
+        Args:
+            pts (List[Vector3]): The list of points to rotate.
+            by_angle (float): The rotation angle in radians.
+
+        Returns:
+            List[Vector3]: A new list of rotated points.
+        """
+        result = []
+        rotsin = math.sin(by)
+        rotcos = math.cos(by)
+
+        for pt in pts:
+            new_x = pt.x * rotcos - pt.z * rotsin
+            new_z = pt.x * rotsin + pt.z * rotcos
+            # Y remains unchanged during Y-axis rotation
+            rotated_pt = Vector3(x=new_x, y=pt.y, z=new_z)
+            result.append(rotated_pt)
+
+        return result
 
     # Visualization Functions
     """

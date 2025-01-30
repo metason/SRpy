@@ -34,7 +34,7 @@ class SectorSchema(Enum):
 class SpatialAdjustment:
     def __init__(
         self,
-        gap: float = 0.02,
+        maxGap: float = 0.02,
         angle: float = 0.05 * math.pi,
         sector_schema: SectorSchema = SectorSchema.nearby,
         sector_factor: float = 1.0,
@@ -44,7 +44,7 @@ class SpatialAdjustment:
         nearby_limit: float = 2.5
     ):
         # Max deviations
-        self.maxGap: float = gap  # max distance of deviation in all directions in meters
+        self.maxGap: float = maxGap  # max distance of deviation in all directions in meters
         self.maxAngleDelta: float = angle  # max angle delta in both directions in radians
 
         # Sector size
@@ -73,7 +73,7 @@ class SpatialAdjustment:
 
 # Default adjustment only used when no SpatialReasoner builds context
 defaultAdjustment = SpatialAdjustment()
-tightAdjustment = SpatialAdjustment(gap=0.002, angle=0.01 * math.pi, sector_factor=0.5)
+tightAdjustment = SpatialAdjustment(maxGap=0.002, angle=0.01 * math.pi, sector_factor=0.5)
 
 
 class SpatialPredicateCategories:

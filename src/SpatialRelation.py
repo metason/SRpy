@@ -7,8 +7,7 @@ import math
 if TYPE_CHECKING:
     from .SpatialObject import SpatialObject  # Prevents circular import at runtime
 
-from .SpatialPredicate import SpatialPredicate
-from .SpatialPredicate import SpatialTerms  # Assuming this module exists
+from .SpatialPredicate import SpatialPredicate, SpatialTerms
 
 
 class SpatialRelation:

@@ -1,4 +1,4 @@
-from .BBoxSector import BBoxSector
+from .BBoxSector import BBoxSector, BBoxSectorFlags
 
 from .SpatialBasics import (
     NearbySchema,
@@ -34,3 +34,4 @@ from .SpatialPredicate import (
 )
 
 from .SpatialObject import ( SpatialObject )
+from .SpatialRelation import SpatialRelation 

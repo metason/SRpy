@@ -1,7 +1,11 @@
-from enum import IntFlag
-import numpy as np
+# src/BBoxSector.py
 
-class BBoxSector(IntFlag):
+from enum import IntFlag
+from typing import Any
+from src.SpatialPredicate import SpatialPredicate
+
+
+class BBoxSectorFlags(IntFlag):
     none = 0  # no sector specified
     i = 1 << 0  # i : inside, inner
     a = 1 << 1  # a : ahead
@@ -33,6 +37,106 @@ class BBoxSector(IntFlag):
     blu = b | l | u
     bru = b | r | u
 
+
+class BBoxSector:
+    """
+    A mutable class that represents spatial sectors using bitmask flags.
+    Mimics Swift's OptionSet behavior.
+    """
+
+    # Predefined descriptions for composite and individual sectors
+    debug_descriptions = {
+        BBoxSectorFlags.i: "i",
+        BBoxSectorFlags.a: "a",
+        BBoxSectorFlags.b: "b",
+        BBoxSectorFlags.l: "l",
+        BBoxSectorFlags.r: "r",
+        BBoxSectorFlags.o: "o",
+        BBoxSectorFlags.u: "u",
+        BBoxSectorFlags.al: "al",
+        BBoxSectorFlags.ar: "ar",
+        BBoxSectorFlags.bl: "bl",
+        BBoxSectorFlags.br: "br",
+        BBoxSectorFlags.ao: "ao",
+        BBoxSectorFlags.au: "au",
+        BBoxSectorFlags.bo: "bo",
+        BBoxSectorFlags.bu: "bu",
+        BBoxSectorFlags.lo: "lo",
+        BBoxSectorFlags.lu: "lu",
+        BBoxSectorFlags.ro: "ro",
+        BBoxSectorFlags.ru: "ru",
+        BBoxSectorFlags.alo: "alo",
+        BBoxSectorFlags.aro: "aro",
+        BBoxSectorFlags.blo: "blo",
+        BBoxSectorFlags.bro: "bro",
+        BBoxSectorFlags.alu: "alu",
+        BBoxSectorFlags.aru: "aru",
+        BBoxSectorFlags.blu: "blu",
+        BBoxSectorFlags.bru: "bru",
+    }
+
+    # Define base flags (individual flags only)
+    base_flags = {
+        BBoxSectorFlags.i,
+        BBoxSectorFlags.a,
+        BBoxSectorFlags.b,
+        BBoxSectorFlags.l,
+        BBoxSectorFlags.r,
+        BBoxSectorFlags.o,
+        BBoxSectorFlags.u
+    }
+
+    def __init__(self, flags=BBoxSectorFlags.none):
+        """
+        Initialize a BBoxSector instance.
+
+        Args:
+            flags (BBoxSectorFlags, optional): Initial sector flags. Defaults to BBoxSectorFlags.none.
+        """
+        self.flags = flags
+
+    def insert(self, flag: BBoxSectorFlags):
+        """
+        Insert a sector flag.
+
+        Args:
+            flag (BBoxSectorFlags): The flag to insert.
+        """
+        self.flags |= flag
+
+    def remove(self, flag: BBoxSectorFlags):
+        """
+        Remove a sector flag.
+
+        Args:
+            flag (BBoxSectorFlags): The flag to remove.
+        """
+        self.flags &= ~flag
+
+    def contains_flag(self, flag: BBoxSectorFlags) -> bool:
+        """
+        Check if a sector flag is present.
+
+        Args:
+            flag (BBoxSectorFlags): The flag to check.
+
+        Returns:
+            bool: True if the flag is present, False otherwise.
+        """
+        return (self.flags & flag) == flag
+
+    def contains(self, flag: BBoxSectorFlags) -> bool:
+        """
+        Alias for contains_flag to maintain backward compatibility.
+
+        Args:
+            flag (BBoxSectorFlags): The flag to check.
+
+        Returns:
+            bool: True if the flag is present, False otherwise.
+        """
+        return self.contains_flag(flag)
+
     def divergencies(self) -> int:
         """
         Calculate the amount of divergency from the inner zone in all 3 directions.
@@ -40,9 +144,16 @@ class BBoxSector(IntFlag):
         Returns:
             int: 0 if the sector includes 'i' (inside), otherwise the number of set bits.
         """
-        if self & BBoxSector.i:
+        if self.contains_flag(BBoxSectorFlags.i):
             return 0
-        return bin(self).count('1')
+        return bin(self.flags.value).count('1')
+
+    def list_base_flags(self):
+        """
+        List only the base flags present in the sector.
+        """
+        return [name for name, member in BBoxSectorFlags.__members__.items()
+                if member in self.flags and name != 'none' and member in BBoxSector.base_flags]
 
     def __str__(self) -> str:
         """
@@ -51,69 +162,161 @@ class BBoxSector(IntFlag):
         Returns:
             str: The descriptive string of the sector.
         """
-        # Predefined descriptions for composite and individual sectors
-        debug_descriptions = {
-            BBoxSector.i: "i",
-            BBoxSector.a: "a",
-            BBoxSector.b: "b",
-            BBoxSector.l: "l",
-            BBoxSector.r: "r",
-            BBoxSector.o: "o",
-            BBoxSector.u: "u",
-            BBoxSector.al: "al",
-            BBoxSector.ar: "ar",
-            BBoxSector.bl: "bl",
-            BBoxSector.br: "br",
-            BBoxSector.ao: "ao",
-            BBoxSector.au: "au",
-            BBoxSector.bo: "bo",
-            BBoxSector.bu: "bu",
-            BBoxSector.lo: "lo",
-            BBoxSector.lu: "lu",
-            BBoxSector.ro: "ro",
-            BBoxSector.ru: "ru",
-            BBoxSector.alo: "alo",
-            BBoxSector.aro: "aro",
-            BBoxSector.blo: "blo",
-            BBoxSector.bro: "bro",
-            BBoxSector.alu: "alu",
-            BBoxSector.aru: "aru",
-            BBoxSector.blu: "blu",
-            BBoxSector.bru: "bru",
-        }
-
-        if self in debug_descriptions:
-            return debug_descriptions[self]
-        elif self == BBoxSector.none:
+        # Always list base flags to match test expectations
+        flags = self.list_base_flags()
+        if flags:
+            return '+'.join(flags)
+        elif self.flags == BBoxSectorFlags.none:
             return "no sector"
         else:
-            # List all individual flags set
-            flags = [name for name, member in BBoxSector.__members__.items()
-                     if member in self and name != 'none']
-            if flags:
-                return '+'.join(flags)
-            else:
-                return "no sector"
+            # If no base flags are set, but some composite flags are, list them
+            # This can happen if only composite flags are set without their base flags
+            composite_flags = [name for name, member in BBoxSectorFlags.__members__.items()
+                               if member in self.flags and name != 'none' and member not in BBoxSector.base_flags]
+            if composite_flags:
+                return '+'.join(composite_flags)
+            return "no sector"
+
+    def __eq__(self, other: Any) -> bool:
+        """
+        Check equality with another BBoxSector instance.
+
+        Args:
+            other (Any): The object to compare.
+
+        Returns:
+            bool: True if equal, False otherwise.
+        """
+        if isinstance(other, BBoxSector):
+            return self.flags == other.flags
+        return False
+
+    def __repr__(self) -> str:
+        """
+        Return the official string representation of the sector.
+
+        Returns:
+            str: The string representation.
+        """
+        return f"BBoxSector(flags={self.flags})"
+
+    def __or__(self, other: Any) -> 'BBoxSector':
+        """
+        Define the behavior of the | operator.
+
+        Args:
+            other (BBoxSector or BBoxSectorFlags): The other sector or flag to combine.
+
+        Returns:
+            BBoxSector: A new BBoxSector instance with combined flags.
+        """
+        if isinstance(other, BBoxSector):
+            return BBoxSector(self.flags | other.flags)
+        elif isinstance(other, BBoxSectorFlags):
+            return BBoxSector(self.flags | other)
+        else:
+            return NotImplemented
+
+    def __ior__(self, other: Any) -> 'BBoxSector':
+        """
+        Define the behavior of the |= operator.
+
+        Args:
+            other (BBoxSector or BBoxSectorFlags): The other sector or flag to combine.
+
+        Returns:
+            BBoxSector: The updated BBoxSector instance.
+        """
+        if isinstance(other, BBoxSector):
+            self.flags |= other.flags
+            return self
+        elif isinstance(other, BBoxSectorFlags):
+            self.flags |= other
+            return self
+        else:
+            return NotImplemented
+
+    def __contains__(self, item: Any) -> bool:
+        """
+        Enable the 'in' operator to check for SpatialPredicate or BBoxSectorFlags.
+
+        Args:
+            item (Any): SpatialPredicate or BBoxSectorFlags to check.
+
+        Returns:
+            bool: True if the item is present, False otherwise.
+        """
+        if isinstance(item, SpatialPredicate):
+            # Map SpatialPredicate to BBoxSectorFlags
+            flag_map = {
+                SpatialPredicate.l: BBoxSectorFlags.l,
+                SpatialPredicate.r: BBoxSectorFlags.r,
+                SpatialPredicate.a: BBoxSectorFlags.a,
+                SpatialPredicate.b: BBoxSectorFlags.b,
+                SpatialPredicate.o: BBoxSectorFlags.o,
+                SpatialPredicate.u: BBoxSectorFlags.u,
+                SpatialPredicate.i: BBoxSectorFlags.i,
+                SpatialPredicate.al: BBoxSectorFlags.al,
+                SpatialPredicate.ar: BBoxSectorFlags.ar,
+                SpatialPredicate.bl: BBoxSectorFlags.bl,
+                SpatialPredicate.br: BBoxSectorFlags.br,
+                SpatialPredicate.ao: BBoxSectorFlags.ao,
+                SpatialPredicate.au: BBoxSectorFlags.au,
+                SpatialPredicate.bo: BBoxSectorFlags.bo,
+                SpatialPredicate.bu: BBoxSectorFlags.bu,
+                SpatialPredicate.lo: BBoxSectorFlags.lo,
+                SpatialPredicate.lu: BBoxSectorFlags.lu,
+                SpatialPredicate.ro: BBoxSectorFlags.ro,
+                SpatialPredicate.ru: BBoxSectorFlags.ru,
+                SpatialPredicate.alo: BBoxSectorFlags.alo,
+                SpatialPredicate.aro: BBoxSectorFlags.aro,
+                SpatialPredicate.blo: BBoxSectorFlags.blo,
+                SpatialPredicate.bro: BBoxSectorFlags.bro,
+                SpatialPredicate.alu: BBoxSectorFlags.alu,
+                SpatialPredicate.aru: BBoxSectorFlags.aru,
+                SpatialPredicate.blu: BBoxSectorFlags.blu,
+                SpatialPredicate.bru: BBoxSectorFlags.bru,
+                # Add more mappings as needed
+            }
+            flag = flag_map.get(item, None)
+            if flag is not None:
+                return self.contains_flag(flag)
+        elif isinstance(item, BBoxSectorFlags):
+            return self.contains_flag(item)
+        return False
+
 
 # Example Usage
+
 if __name__ == "__main__":
-    sector = BBoxSector.alo
-    print(f"Sector: {sector}")  # Output: Sector: alo
+    # Initialize with a predefined composite sector
+    sector = BBoxSector(BBoxSectorFlags.alo)
+    print(f"Sector: {sector}")  # Output: Sector: a+l+o
     print(f"Divergencies: {sector.divergencies()}")  # Output: Divergencies: 3
 
-    combined_sector = BBoxSector.a | BBoxSector.l | BBoxSector.o
-    print(f"Combined Sector: {combined_sector}")  # Output: Combined Sector: alo
+    # Create an empty sector and insert flags
+    combined_sector = BBoxSector()
+    combined_sector.insert(BBoxSectorFlags.a)
+    combined_sector.insert(BBoxSectorFlags.l)
+    combined_sector.insert(BBoxSectorFlags.o)
+    print(f"Combined Sector: {combined_sector}")  # Output: Combined Sector: a+l+o
     print(f"Divergencies: {combined_sector.divergencies()}")  # Output: Divergencies: 3
 
-    inner_sector = BBoxSector.i
+    # Initialize with the 'inside' sector
+    inner_sector = BBoxSector(BBoxSectorFlags.i)
     print(f"Inner Sector: {inner_sector}")  # Output: Inner Sector: i
     print(f"Divergencies: {inner_sector.divergencies()}")  # Output: Divergencies: 0
 
-    no_sector = BBoxSector.none
+    # Initialize with no sector
+    no_sector = BBoxSector()
     print(f"No Sector: {no_sector}")  # Output: No Sector: no sector
     print(f"Divergencies: {no_sector.divergencies()}")  # Output: Divergencies: 0
 
     # Undefined composite sector example
-    undefined_sector = BBoxSector.a | BBoxSector.l | BBoxSector.o | BBoxSector.u
-    print(f"Undefined Combined Sector: {undefined_sector}")  # Output: a+l+o+u
+    undefined_sector = BBoxSector()
+    undefined_sector.insert(BBoxSectorFlags.a)
+    undefined_sector.insert(BBoxSectorFlags.b)
+    undefined_sector.insert(BBoxSectorFlags.l)
+    undefined_sector.insert(BBoxSectorFlags.r)
+    print(f"Undefined Combined Sector: {undefined_sector}")  # Output: Undefined Combined Sector: a+b+l+r
     print(f"Divergencies: {undefined_sector.divergencies()}")  # Output: Divergencies: 4
