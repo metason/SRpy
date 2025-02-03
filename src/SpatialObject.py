@@ -795,7 +795,7 @@ class SpatialObject:
         x = vx * rotcos - vz * rotsin
         z = vx * rotsin + vz * rotcos
         return Vector3(x, pt.y - self.position.y, z)
-
+    
     def intoLocal_pts(self, pts: List[Vector3]) -> List[Vector3]:
         rotsin = math.sin(self.angle)
         rotcos = math.cos(self.angle)
@@ -841,6 +841,7 @@ class SpatialObject:
         ):
             zone.insert(BBoxSectorFlags.i)
             return zone
+        
 
         if point.x + delta > self.width / 2.0:
             zone.insert(BBoxSectorFlags.l)

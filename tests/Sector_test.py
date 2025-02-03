@@ -35,9 +35,8 @@ class TestBBoxSectors(unittest.TestCase):
             height=0.5,
             depth=0.5
         )
-        # Extract local center
-        center = self.obj.intoLocal(subject.center)
-        relation = self.obj.sectorOf(center)
+        
+        relation = self.obj.sector(subject)
         self.assertEqual(relation.predicate, SpatialPredicate.o)
     
     def test_sector_al(self):
@@ -51,9 +50,7 @@ class TestBBoxSectors(unittest.TestCase):
             height=0.5,
             depth=0.5
         )
-        # Extract local center
-        center = self.obj.intoLocal(subject.center)
-        relation = self.obj.sectorOf(center)
+        relation = self.obj.sector(subject)
         self.assertEqual(relation.predicate, SpatialPredicate.al)
     
     def test_sector_bru(self):
@@ -67,9 +64,7 @@ class TestBBoxSectors(unittest.TestCase):
             height=0.5,
             depth=0.5
         )
-        # Extract local center
-        center = self.obj.intoLocal(subject.center)
-        relation = self.obj.sectorOf(center)
+        relation = self.obj.sector(subject)
         self.assertEqual(relation.predicate, SpatialPredicate.bru)
     
     def test_sector_i(self):
@@ -83,9 +78,7 @@ class TestBBoxSectors(unittest.TestCase):
             height=1.0,
             depth=1.0
         )
-        # Extract local center
-        center = self.obj.intoLocal(subject.center)
-        relation = self.obj.sectorOf(center)
+        relation = self.obj.sector(subject)
         self.assertEqual(relation.predicate, SpatialPredicate.i)
     
     def test_nosector_not_nearby(self):
@@ -99,9 +92,8 @@ class TestBBoxSectors(unittest.TestCase):
             height=1.0,
             depth=1.0
         )
-        # Extract local center
-        center = self.obj.intoLocal(subject.center)
-        relation = self.obj.sectorOf(center, nearBy=True)
+        
+        relation = self.obj.sector(subject, nearBy=True)
         self.assertEqual(relation.predicate, SpatialPredicate.undefined)
 
 # Run the tests

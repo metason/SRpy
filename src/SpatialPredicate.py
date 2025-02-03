@@ -199,7 +199,7 @@ class SpatialTerms:
         PredicateTerm(code=SpatialPredicate.crossing, predicate="crossing", preposition=""),
         PredicateTerm(code=SpatialPredicate.overlapping, predicate="overlapping", preposition="", synonym="intersecting", reverse="overlapping", antonym="disjoint"),
         PredicateTerm(code=SpatialPredicate.disjoint, predicate="disjoint", preposition="to", reverse="disjoint", antonym="overlapping"),
-        PredicateTerm(code=SpatialPredicate.touching, predicate="touching", preposition="", reverse="touching"),
+        PredicateTerm(code=SpatialPredicate.touching, predicate="touching", preposition="with", reverse="touching"),
         PredicateTerm(code=SpatialPredicate.frontaligned, predicate="front aligned", preposition="with", reverse="front aligned"),
         PredicateTerm(code=SpatialPredicate.meeting, predicate="meeting", preposition="", reverse="meeting"),
         PredicateTerm(code=SpatialPredicate.beside, predicate="beside", preposition="", reverse="beside"),

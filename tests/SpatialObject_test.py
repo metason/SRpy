@@ -230,7 +230,7 @@ class TestSpatialObjectSectorMethods(unittest.TestCase):
         sector = self.obj.sectorOf(center)
         # Check if 'i' flag is set
         self.assertTrue(sector.contains(BBoxSectorFlags.i))
-        self.assertEqual(sector, BBoxSector.i)
+        self.assertEqual(sector, BBoxSectorFlags.i)
 
     def test_sector_of_left_point(self):
         point = Vector3(3.0, 1.0, 1.0)  # Beyond width/2 + maxGap (4/2 + 0.5 = 2.5)
@@ -291,12 +291,17 @@ class TestSpatialObjectSpatialRelations(unittest.TestCase):
         )
         # Mock SpatialRelation and SpatialPredicate if needed
         # Assuming SpatialRelation is correctly implemented
-        adjustment = SpatialAdjustment(maxGap=0.5)
-        self.obj1.adjustment = adjustment
-        self.obj2.adjustment = adjustment
+        adjustment_1 = SpatialAdjustment()
+        adjustment_1.maxGap = 1.0
+        adjustment_2 = SpatialAdjustment()
+        adjustment_2.maxGap = 1.0
+        
+        self.obj1.adjustment = adjustment_1
+        self.obj2.adjustment = adjustment_2
         # create the spatial context SpatialReasoner
-        self.obj1.context = MagicMock()
-
+        spatial_reasoner = SpatialReasoner()
+        spatial_reasoner.load([self.obj1, self.obj2])
+        
     def test_near_relation(self):
         relations = self.obj1.topologies(self.obj2)
         near_rel = next((rel for rel in relations if rel.predicate == SpatialPredicate.near), None)

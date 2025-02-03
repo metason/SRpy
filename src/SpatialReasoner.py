@@ -5,6 +5,7 @@ import json
 
 # Import the SpatialObject and dependencies
 from src.vector3 import Vector3
+from src.Vector2 import Vector2
 from src.SpatialBasics import (
     NearbySchema,
     SectorSchema,
@@ -47,7 +48,7 @@ class SpatialReasoner:
         # === Settings ===
         self.adjustment = SpatialAdjustment()
         self.deduce = SpatialPredicateCategories()
-        self.north = Vector2(dx=0.0, dy=-1.0)  # North direction, e.g., defined by ARKit
+        self.north = Vector2(x=0.0, y=-1.0)  # North direction, e.g., defined by ARKit
 
         # === Data ===
         self.objects: List[SpatialObject] = []
@@ -80,7 +81,7 @@ class SpatialReasoner:
             objList = []
             for obj in self.objects:
                 obj.context = self
-                objList.append(obj.as_dict())
+                objList.append(obj.asDict())
                 if obj.observing:
                     self.observer = obj
             self.base["objects"] = objList

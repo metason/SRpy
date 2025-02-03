@@ -1,0 +1,48 @@
+.
+├── .gitignore
+├── .nosync
+├── .txt
+├── LICENSE
+├── README.md
+├── all_files_output.txt
+├── src
+│   ├── BBoxSector.py
+│   ├── SpatialBasics.py
+│   ├── SpatialInference.py
+│   ├── SpatialObject.py
+│   ├── SpatialPredicate.py
+│   ├── SpatialReasoner.py
+│   ├── SpatialRelation.py
+│   ├── Vector2.py
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── BBoxSector.cpython-312.pyc
+│   │   ├── SpatialBasics.cpython-312.pyc
+│   │   ├── SpatialInference.cpython-312.pyc
+│   │   ├── SpatialObject.cpython-312.pyc
+│   │   ├── SpatialPredicate.cpython-312.pyc
+│   │   ├── SpatialReasoner.cpython-312.pyc
+│   │   ├── SpatialRelation.cpython-312.pyc
+│   │   ├── __init__.cpython-312.pyc
+│   │   └── vector3.cpython-312.pyc
+│   └── vector3.py
+├── tests
+│   ├── BBoxSector_test.py
+│   ├── Sector_test.py
+│   ├── SpatialBasics_test.py
+│   ├── SpatialObject_test.py
+│   ├── SpatialPredicate_test.py
+│   ├── SpatialRelation_test.py
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── BBoxSector_test.cpython-312.pyc
+│   │   ├── Sector_test.cpython-312.pyc
+│   │   ├── SpatialBasics_test.cpython-312.pyc
+│   │   ├── SpatialObject_test.cpython-312.pyc
+│   │   ├── SpatialPredicate_test.cpython-312.pyc
+│   │   ├── SpatialRelation_test.cpython-312.pyc
+│   │   └── __init__.cpython-312.pyc
+│   └── test.py
+└── to_text.sh
+
+5 directories, 41 files

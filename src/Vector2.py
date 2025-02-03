@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Optional
+from typing import List, Optional, Any
 
 class Vector2:
     def __init__(self, x: float = 0.0, y: float = 0.0):
@@ -11,8 +11,6 @@ class Vector2:
             y (float): The y-component of the vector. Defaults to 0.0.
         """
         self.array = np.array([x, y], dtype=float)
-        self.dx = x
-        self.dy = y
     
     @property
     def x(self) -> float:

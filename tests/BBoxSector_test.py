@@ -9,7 +9,7 @@ class TestBBoxSector(unittest.TestCase):
             if flag == BBoxSectorFlags.none:
                 continue
             sector = BBoxSector(flag)
-            self.assertEqual(str(sector), BBoxSector.debug_descriptions.get(flag, "+".join([name for name, member in BBoxSectorFlags.__members__.items() if member == flag])))
+            self.assertEqual(str(sector), BBoxSector.debug_descriptions.get(flag, "".join([name for name, member in BBoxSectorFlags.__members__.items() if member == flag])))
 
     def test_composite_flags(self):
         composite_flags = [
@@ -28,7 +28,7 @@ class TestBBoxSector(unittest.TestCase):
         sector.insert(BBoxSectorFlags.a)
         sector.insert(BBoxSectorFlags.b)
         sector.insert(BBoxSectorFlags.l)
-        self.assertEqual(str(sector), "a+b+l")
+        self.assertEqual(str(sector), "abl")
 
     def test_str_representation_invalid(self):
         sector = BBoxSector()
@@ -36,7 +36,7 @@ class TestBBoxSector(unittest.TestCase):
         sector.insert(BBoxSectorFlags.b)
         sector.insert(BBoxSectorFlags.l)
         sector.insert(BBoxSectorFlags.r)
-        self.assertEqual(str(sector), "a+b+l+r")
+        self.assertEqual(str(sector), "ablr")
 
     def test_no_sector(self):
         sector = BBoxSector()
@@ -52,7 +52,7 @@ class TestBBoxSector(unittest.TestCase):
         sector.insert(BBoxSectorFlags.a)
         sector.insert(BBoxSectorFlags.l)
         sector.insert(BBoxSectorFlags.o)
-        self.assertEqual(str(sector), "a+l+o")
+        self.assertEqual(str(sector), "alo")
         self.assertEqual(sector.divergencies(), 3)
 
     # ... [Additional tests as needed] ...

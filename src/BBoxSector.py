@@ -165,7 +165,7 @@ class BBoxSector:
         # Always list base flags to match test expectations
         flags = self.list_base_flags()
         if flags:
-            return '+'.join(flags)
+            return ''.join(flags)
         elif self.flags == BBoxSectorFlags.none:
             return "no sector"
         else:
@@ -174,7 +174,7 @@ class BBoxSector:
             composite_flags = [name for name, member in BBoxSectorFlags.__members__.items()
                                if member in self.flags and name != 'none' and member not in BBoxSector.base_flags]
             if composite_flags:
-                return '+'.join(composite_flags)
+                return ''.join(composite_flags)
             return "no sector"
 
     def __eq__(self, other: Any) -> bool:
