@@ -322,7 +322,7 @@ assembly: List[SpatialPredicate] = [
 ]
 topology: List[SpatialPredicate] = proximity + directionality + adjacency + orientations + assembly
 contacts: List[SpatialPredicate] = [SpatialPredicate.on, SpatialPredicate.at, SpatialPredicate.by, SpatialPredicate.in_]
-connectivity: List[SpatialPredicate] = contacts.copy()
+connectivity: List[SpatialPredicate] = [SpatialPredicate.on, SpatialPredicate.at, SpatialPredicate.by, SpatialPredicate.in_]
 comparability: List[SpatialPredicate] = [
     SpatialPredicate.smaller, SpatialPredicate.bigger, SpatialPredicate.shorter, SpatialPredicate.longer,
     SpatialPredicate.taller, SpatialPredicate.thinner, SpatialPredicate.wider, SpatialPredicate.fitting,

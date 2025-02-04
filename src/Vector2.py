@@ -104,12 +104,16 @@ class Vector2:
         Returns:
             Vector2: The rotated vector.
         """
-        rotation_matrix = np.array([
-            [np.cos(radians), -np.sin(radians)],
-            [np.sin(radians),  np.cos(radians)]
-        ])
-        rotated = rotation_matrix.dot(self.array)
-        return Vector2(*rotated)
+        
+        radians = -1 * radians
+        rotation_sin = np.sin(radians)
+        rotation_cos = np.cos(radians)
+        
+        # Apply the 2D rotation transformation.
+        new_x = self.x * rotation_cos - self.y * rotation_sin
+        new_y = self.x * rotation_sin + self.y * rotation_cos
+        
+        return Vector2(new_x, new_y)
     
     def distance_to(self, other: 'Vector2') -> float:
         """

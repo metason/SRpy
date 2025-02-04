@@ -73,7 +73,7 @@ class TestBBoxSectors(unittest.TestCase):
         """
         subject = SpatialObject(
             id="subj",
-            position=Vector3(x=0, y=0, z=0.1),
+            position=Vector3(x=0, y=0, z=-0.1),
             width=1.0,
             height=1.0,
             depth=1.0

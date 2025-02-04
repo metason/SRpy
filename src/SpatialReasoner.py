@@ -126,7 +126,7 @@ class SpatialReasoner:
 
         for obj_dict in obj_dicts:
             obj = SpatialObject(id=obj_dict["id"])
-            obj.from_any(obj_dict)
+            obj.fromAny(obj_dict)
             self.objects.append(obj)
             if obj.observing:
                 self.observer = obj
@@ -487,7 +487,8 @@ class SpatialReasoner:
 
                 if do_add:
                     left_link = " -- "
-                    if relation.predicate.is_symmetric():
+                    #if relation.predicate.is_symmetric():
+                    if SpatialTerms.symmetric(relation.predicate):
                         left_link = " <-- "
                         search_by = f"{relation.object.id}{left_link}{relation.predicate.value} --> {relation.subject.id}"
                         if search_by in mmd_rels:
@@ -495,7 +496,7 @@ class SpatialReasoner:
                     if do_add:
                         mmd_rels += f"    {relation.subject.id}{left_link}{relation.predicate.value} --> {relation.object.id}\n"
 
-                if relation.predicate in SpatialPredicateCategories.contacts:
+                if relation.predicate in contacts:
                     do_add_contact = True
                     left_link = " -- "
                     if relation.predicate == SpatialPredicate.by:
@@ -506,7 +507,7 @@ class SpatialReasoner:
                     if do_add_contact:
                         mmd_contacts += f"    {relation.subject.id}{left_link}{relation.predicate.value} --> {relation.object.id}\n"
 
-                if relation.predicate in SpatialPredicateCategories.contacts:
+                if relation.predicate in contacts:
                     rels += f"* {relation.desc()}\n"
 
         # Append Spatial Relations Graph
@@ -521,7 +522,7 @@ class SpatialReasoner:
         md += "\n## Spatial Relations\n\n" + rels + "\n"
 
         # Determine log file name
-        multiple_logs = pipeline.count("log(") > 2
+        multiple_logs = self.pipeline.count("log(") > 2
         counter_str = str(self.logCnt) if multiple_logs else ""
         log_filename = f"log{counter_str}.md"
         log_path = self.logFolder / log_filename

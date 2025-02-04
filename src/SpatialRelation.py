@@ -88,7 +88,7 @@ class SpatialRelation:
             subject_str = self.subject.id
 
         # Get predicate as verb + preposition using SpatialTerms
-        predicate_str = SpatialTerms.term_with_verb_and_preposition(self.predicate)
+        predicate_str = SpatialTerms.termWithVerbAndPreposition(self.predicate)
 
         # Determine object representation
         if self.object.label:

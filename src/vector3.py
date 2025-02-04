@@ -48,9 +48,10 @@ class Vector3:
         return Vector3(*(self.array / norm))
     
     def rotate(self, radians):
+        radians = -1 * radians
         rotation_matrix = np.array([
             [np.cos(radians), 0, np.sin(radians)],
-            [0, 1, 0],
+            [0,                1,               0],
             [-np.sin(radians), 0, np.cos(radians)]
         ])
         rotated = rotation_matrix.dot(self.array)

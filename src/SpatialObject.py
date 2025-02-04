@@ -125,9 +125,16 @@ class SpatialObject:
     @property
     def azimuth(self) -> float:
         # in degrees clockwise of GCS as ±360°
+        print("Azimuth called: ")
+        print("context: ", self.context)
+        print("north: ", self.context.north)
         if self.context is not None and self.context.north is not None:
-            north_angle = math.atan2(self.context.north.y, self.context.north.x) * 180.0 / math.pi
-            return -(self.yaw + north_angle - 90.0) % 360.0
+            north_angle = math.degrees(math.atan2(self.context.north.y, self.context.north.x))
+            # Compute: yaw + north_angle - 90.0, then take its truncating remainder modulo 360.
+            value = self.yaw + north_angle - 90.0
+            remainder = math.fmod(value, 360.0)
+            return -remainder
+        print("Failed no context or north")
         return 0.0
 
     @property
@@ -1831,22 +1838,49 @@ class SpatialObject:
 
     # Relation Value Method
     def relationValue(self, relval: str, pre: List[int]) -> float:
+        """
+        Returns a numeric value for a given relation attribute (e.g., "angle" or "delta")
+        for relations with a given predicate. If no matching relation is found or the
+        attribute is unrecognized, 0.0 is returned.
+        
+        Args:
+            relval (str): A string in the format "predicate.attribute" (e.g., "near.delta").
+            pre (List[int]): A list of indices (or other parameters) used to query relations.
+            
+        Returns:
+            float: The requested relation value, or 0.0 if not found or invalid.
+        """
+        # Split the input string into predicate and attribute parts.
         list_split = [part.strip() for part in relval.split(".")]
-        if len(list_split) != 2 and self.context is None:
+        if len(list_split) != 2 or self.context is None:
             return 0.0
-        predicate = list_split[0]
-        attribute = list_split[1]
+
+        requested_predicate = list_split[0]  # e.g., "far" or "near"
+        requested_attribute = list_split[1]  # e.g., "delta" or "angle"
         result_val: float = 0.0
+
         for i in pre:
             if self.context:
-                rels = self.context.relationsWith(i, predicate=predicate)
+                # Retrieve relations for the given index and predicate.
+                # (Note: Make sure that your context’s relationsWith() method
+                #  filters on the predicate correctly, or else you need to check it here.)
+                rels = self.context.relationsWith(i, predicate=requested_predicate)
                 for rel in rels:
-                    if rel.subject == self:
-                        if attribute == "angle":
+                    # Only use the relation if it both belongs to self and
+                    # its predicate matches the requested predicate.
+                    if rel.subject == self and rel.predicate.value == requested_predicate:
+                        if requested_attribute == "angle":
                             result_val = rel.angle
-                        else:
+                        elif requested_attribute == "delta":
                             result_val = rel.delta
+                        else:
+                            # Unknown attribute; return 0.0 per test expectations.
+                            result_val = 0.0
+                        # If a matching relation is found, you can break out early.
+                        return result_val
+
         return result_val
+
     
     def rotate(self, pts: List[Vector3], by: float) -> List[Vector3]:
         """
