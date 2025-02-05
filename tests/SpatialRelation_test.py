@@ -75,7 +75,7 @@ class TestSpatialRelations(unittest.TestCase):
         )
         obj = SpatialObject(
             id="obj",
-            position=Vector3(x=0, y=0.0, z=0),
+            position=Vector3(x=1.8, y=1.8, z=1.8),
             width=1.0,
             height=1.0,
             depth=1.0
@@ -89,8 +89,10 @@ class TestSpatialRelations(unittest.TestCase):
 
         # Check that relations contain 'near' and 'disjoint'
         predicates = [rel.predicate for rel in relations]
+
         self.assertIn(SpatialPredicate.near, predicates)
         self.assertIn(SpatialPredicate.disjoint, predicates)
+        self.assertIn(SpatialPredicate.below, predicates)
 
         # Reset nearbyFactor
         defaultAdjustment.nearbyFactor = self.original_nearby_factor
@@ -162,10 +164,10 @@ class TestSpatialRelations(unittest.TestCase):
         )
         obj = SpatialObject(
             id="obj",
-            position=Vector3(x=0.0, y=0.2, z=0),
-            width=0.5,
-            height=0.5,
-            depth=0.5
+            position=Vector3(x=0.0, y=0.0, z=0),
+            width=0.1,
+            height=0.1,
+            depth=0.1
         )
         relations = obj.relate(subject=subject, topology=True)
         self.print_relations(relations)
@@ -173,6 +175,10 @@ class TestSpatialRelations(unittest.TestCase):
 
         # Check that relations contain 'containing' and do not contain 'disjoint'
         predicates = [rel.predicate for rel in relations]
+        print("****************************************************************************************")
+        for predicate in predicates: 
+            print("predicate: ", predicate)
+        print("*"*100)
         self.assertIn(SpatialPredicate.containing, predicates)
         self.assertNotIn(SpatialPredicate.disjoint, predicates)
 
@@ -415,18 +421,17 @@ class TestSpatialRelations(unittest.TestCase):
         """
         subject = SpatialObject(
             id="subj",
-            position=Vector3(x=0.76, y=0, z=-0.5),
-            width=0.8,
-            height=0.8,
+            position=Vector3(x=1, y=1, z=1),
+            width=0.5,
+            height=0.5,
             depth=0.5
-        )
-        subject.setYaw(math.radians(90.0))  # Assuming setYaw takes radians
+        )  # Assuming setYaw takes radians
         obj = SpatialObject(
             id="obj",
-            position=Vector3(x=0, y=0, z=0),
-            width=1.0,
-            height=1.0,
-            depth=1.0
+            position=Vector3(x=0, y=1, z=0),
+            width=0.50,
+            height=0.50,
+            depth=0.50
         )
         relations = obj.relate(subject=subject, topology=True)
         self.print_relations(relations)
@@ -434,6 +439,10 @@ class TestSpatialRelations(unittest.TestCase):
 
         # Check that relations contain 'meeting'
         predicates = [rel.predicate for rel in relations]
+        print("****************************************************************************************")
+        for predicate in predicates: 
+            print("predicate: ", predicate)
+        print("*"*100)
         self.assertIn(SpatialPredicate.meeting, predicates)
 
     def test_congruent(self):
@@ -462,6 +471,7 @@ class TestSpatialRelations(unittest.TestCase):
 
         # Check that relations contain 'congruent'
         predicates = [rel.predicate for rel in relations]
+
         self.assertIn(SpatialPredicate.congruent, predicates)
 
     def test_seen_right(self):

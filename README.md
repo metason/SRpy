@@ -16,6 +16,16 @@ Package manager
 
 Tests and Visualizations
 
+``` python tests/test.py ```
+
+To check the coverage install the coverage package: 
+
+``` pip install coverage ```
+run the following command: 
+``` coverage report -m ``` 
+
+
+
 ## License
 
 See [LICENSE](LICENSE) file.

@@ -25,6 +25,7 @@ class Vector3:
         if not isinstance(other, Vector3):
             return Vector3(*(self.array - other))
         return Vector3(*(self.array - other.array))
+    
     def __truediv__(self, other):
         return Vector3(*(self.array / other))
 
@@ -37,6 +38,10 @@ class Vector3:
     
     def magnitude(self):
         return np.linalg.norm(self.array)
+    
+    def __abs__(self):
+        # This allows abs(vector) or np.abs(vector) to return its magnitude.
+        return self.magnitude()
     
     def length(self):
         return self.magnitude()
