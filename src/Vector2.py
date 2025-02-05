@@ -105,7 +105,7 @@ class Vector2:
             Vector2: The rotated vector.
         """
         
-        radians = -1 * radians
+        radians = 1 * radians
         rotation_sin = np.sin(radians)
         rotation_cos = np.cos(radians)
         

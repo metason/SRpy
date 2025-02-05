@@ -79,7 +79,7 @@ class TestVector3(unittest.TestCase):
         # The rotate method internally multiplies the radians by -1.
         # So rotating Vector3(1, 0, 0) by math.pi/2 should yield Vector3(0, 0, -1).
         v = Vector3(1.0, 0.0, 0.0)
-        rotated = v.rotate(-math.pi/2)
+        rotated = v.rotate(math.pi/2)
         expected = Vector3(0.0, 0.0, -1.0)
         self.assertTrue(np.allclose(rotated.array, expected.array, atol=1e-8),
                         msg=f"rotated: {rotated}, expected: {expected}")
