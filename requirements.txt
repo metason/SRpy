@@ -1,0 +1,6 @@
+trimesh 
+shapely 
+freetype-py
+numpy 
+scipy
+coverage
