@@ -3,6 +3,14 @@
 > _A flexible 3D Spatial Reasoning library in Python_
 
 ## Getting Started
+create a virtual env. 
+``` python -m venv venv```
+activate env
+```. ./venv/bin/activate ```
+
+install all packages: 
+```python -m pip install requirements.txt```
+
 
 ### Documentation
 
