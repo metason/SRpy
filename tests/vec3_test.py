@@ -3,7 +3,7 @@ import math
 import unittest
 import numpy as np
 
-from src.vector3 import Vector3  # Adjust the import path if necessary
+from src.Vector3 import Vector3  # Adjust the import path if necessary
 
 class TestVector3(unittest.TestCase):
 

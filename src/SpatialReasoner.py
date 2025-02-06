@@ -4,7 +4,7 @@ from pathlib import Path
 import json
 
 # Import the SpatialObject and dependencies
-from src.vector3 import Vector3
+from src.Vector3 import Vector3
 from src.Vector2 import Vector2
 from src.SpatialBasics import (
     NearbySchema,

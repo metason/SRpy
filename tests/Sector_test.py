@@ -4,7 +4,7 @@ import unittest
 import math
 
 # Import the necessary classes and enums from your modules
-from src.vector3 import Vector3
+from src.Vector3 import Vector3
 from src.SpatialObject import SpatialObject
 from src.SpatialPredicate import SpatialPredicate
 from src.SpatialRelation import SpatialRelation

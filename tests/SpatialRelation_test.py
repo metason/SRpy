@@ -5,7 +5,7 @@ import math
 from unittest.mock import MagicMock
 
 # Import the necessary classes and enums from your modules
-from src.vector3 import Vector3
+from src.Vector3 import Vector3
 from src.SpatialBasics import (
     NearbySchema,
     SectorSchema,

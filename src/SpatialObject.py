@@ -6,7 +6,7 @@ import datetime
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 import logging
 
-from .vector3 import Vector3
+from .Vector3 import Vector3
 from .SpatialBasics import (
     NearbySchema,
     SectorSchema,
