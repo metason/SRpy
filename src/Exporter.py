@@ -25,7 +25,7 @@ class SceneExporter:
         """
         self.root_dir = root_dir
         # Define file paths for the final USD file and a temporary one for packaging.
-        self.usd_file_path = os.path.join(root_dir, "scene.usd")
+        self.usd_file_path = None
         self.temp_usd_path = os.path.join(self.root_dir, "temp_scene.usd")
         self.stage = None
 
@@ -123,6 +123,7 @@ class SceneExporter:
         :param filename: The final USDZ file name (including path).
         """
         # Delete existing USD files if they exist.
+        self.usd_file_path = os.path.join(self.root_dir, filename)
         if os.path.exists(self.usd_file_path):
             os.remove(self.usd_file_path)
             print(f"Deleted existing file {self.usd_file_path}")
@@ -131,7 +132,7 @@ class SceneExporter:
             print(f"Deleted existing file {self.temp_usd_path}")
             
         # Create a new USD stage.
-        self.stage = Usd.Stage.CreateNew(self.usd_file_path)
+        self.stage = Usd.Stage.CreateNew(self.temp_usd_path)
         
         # Add each spatial object to the stage.
         for obj in spatial_objects:
