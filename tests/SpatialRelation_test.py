@@ -3,6 +3,7 @@
 import unittest
 import math
 from unittest.mock import MagicMock
+from src.Exporter import SceneExporter
 
 # Import the necessary classes and enums from your modules
 from src.Vector3 import Vector3
@@ -128,6 +129,9 @@ class TestSpatialRelations(unittest.TestCase):
         """
         Test that a subject is inside an object.
         """
+        self.temp_dir = "./tests/scenes/"
+        # Instantiate the Exporter with the temporary directory as root
+        self.exporter = SceneExporter(self.temp_dir)
         subject = SpatialObject(
             id="subj",
             position=Vector3(x=0.0, y=0.2, z=0),
@@ -145,7 +149,9 @@ class TestSpatialRelations(unittest.TestCase):
         relations = obj.relate(subject=subject, topology=True)
         self.print_relations(relations)
         # Export is ignored
-
+        export_filename = "inside.usdz"
+        spatial_objects = [obj, subject]
+        self.exporter.exportUSDZ(spatial_objects, export_filename)
         # Check that relations contain 'inside' and do not contain 'disjoint'
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.inside, predicates)

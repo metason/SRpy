@@ -140,7 +140,7 @@ class SceneExporter:
         # Export the USD stage to a temporary USD file.
         self.stage.GetRootLayer().Export(self.temp_usd_path)
         print(f"Exported temporary USD scene to {self.temp_usd_path}")
-        
+        filename = self.root_dir + filename
         # Use usdzip to package the USD file into a USDZ file.
         cmd = ["usdzip", filename, self.temp_usd_path]
         try:
