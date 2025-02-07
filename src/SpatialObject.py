@@ -103,7 +103,7 @@ class SpatialObject:
         self.visible: bool = False  # in screen
         self.focused: bool = False  # in center of screen, for some time
         self.context: Optional['SpatialReasoner'] = None  # optional context
-
+        self.transparency = 0.5
     # Derived Attributes
     @property
     def center(self) -> Vector3:
@@ -112,6 +112,20 @@ class SpatialObject:
         self.position.y + self.height / 2.0,
         self.position.z + self.depth / 2.0
     )
+        
+    @property 
+    def transparency(self) -> float:
+        return self._transparency  # Use the backing variable
+    
+    @transparency.setter
+    def transparency(self, value: float):
+        # Clamp the value between 0.0 and 1.0
+        if value < 0.0:
+            self._transparency = 0.0
+        elif value > 1.0:
+            self._transparency = 1.0
+        else:
+            self._transparency = value
 
     @property
     def pos(self) -> Vector3:

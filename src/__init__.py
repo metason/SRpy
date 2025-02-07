@@ -34,4 +34,5 @@ from .SpatialPredicate import (
 )
 
 from .SpatialObject import ( SpatialObject )
+from .Exporter import (SceneExporter)
 from .SpatialRelation import SpatialRelation 
