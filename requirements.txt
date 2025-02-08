@@ -4,3 +4,4 @@ freetype-py
 numpy 
 scipy
 coverage
+usd-core
