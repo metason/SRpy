@@ -936,39 +936,28 @@ class SpatialObject:
                     result.y = min(self.nearby_radius(), self.adjustment.sectorLimit)
             
             return result
-
-    def topologies(self, subject: 'SpatialObject') -> List['SpatialRelation']:
-        result: List['SpatialRelation'] = []
-        theta = subject.angle - self.angle
-        center_distance = (subject.center - self.center).length()
-        radius_sum = self.radius + subject.radius
-        can_not_overlap = center_distance > radius_sum
-
-        # Compute local coordinates once for use below.
-        local_pts = self.intoLocal_pts(pts=subject.points())
-        zones = [self.sectorOf(point=pt, nearBy=False, epsilon=0.00001) for pt in local_pts]
-        local_center = self.intoLocal(pt=subject.center)
-        center_zone = self.sectorOf(point=local_center, nearBy=False, epsilon=-self.adjustment.maxGap)
-
-        # === 1. Same Center Relation ===
+        
+        
+    def _haveSameCenter(self, subject: 'SpatialObject', center_distance:float, result: List['SpatialRelation']) -> List['SpatialRelation']:
         if center_distance < 1e-6:
             relation = SpatialRelation(
                 subject=subject,
                 predicate=SpatialPredicate.samecenter,
                 object=self,
                 delta=center_distance,
-                angle=theta
+                angle=subject.angle - self.angle
             )
             result.append(relation)
-
-        # === 2. Near / Far Relation ===
+        return result
+    
+    def _areNearOrFar(self, subject: 'SpatialObject', center_distance: float, result: List['SpatialRelation']) -> List['SpatialRelation']:
         if center_distance < subject.nearbyRadius() + self.nearbyRadius():
             relation = SpatialRelation(
                 subject=subject,
                 predicate=SpatialPredicate.near,
                 object=self,
                 delta=center_distance,
-                angle=theta
+                angle=subject.angle - self.angle
             )
             result.append(relation)
         else:
@@ -977,22 +966,26 @@ class SpatialObject:
                 predicate=SpatialPredicate.far,
                 object=self,
                 delta=center_distance,
-                angle=theta
+                angle=subject.angle - self.angle
             )
             result.append(relation)
-
-        # Always add a disjoint relation if objects cannot overlap.
+        return result
+    
+    def _areDisjoint(self, subject: 'SpatialObject', center_distance:float, can_not_overlap:bool, result: List['SpatialRelation']) -> List['SpatialRelation']:
         if can_not_overlap:
             relation = SpatialRelation(
                 subject=subject,
                 predicate=SpatialPredicate.disjoint,
                 object=self,
                 delta=center_distance,
-                angle=theta
+                angle=subject.angle - self.angle
             )
             result.append(relation)
-
-        # === 3. Basic Adjacency by Center Zone (front/back/left/right/above/below) ===
+        return result
+    
+    def _basicAdjacency(self, subject: 'SpatialObject', center_zone: BBoxSector, result: List['SpatialRelation']) -> List['SpatialRelation']:
+        local_center = self.intoLocal(pt=subject.center)
+        theta = subject.angle - self.angle
         if SpatialPredicate.l in center_zone:
             gap = float(local_center.x) - self.width / 2.0 - subject.width / 2.0
             relation = SpatialRelation(
@@ -1055,10 +1048,13 @@ class SpatialObject:
                 angle=theta
             )
             result.append(relation)
-
-        # === 4. Side-related Adjacency Using "nearBy" Zone ===
-        # Recompute zone with nearBy flag to catch touching/beside relations.
+        return result
+        
+    def _catch_side_related_adjacency(self, subject: 'SpatialObject', result: List['SpatialRelation']) -> List['SpatialRelation']:
+        theta = subject.angle - self.angle
+        local_center = self.intoLocal(pt=subject.center)
         near_zone = self.sectorOf(point=local_center, nearBy=True, epsilon=-self.adjustment.maxGap)
+        local_pts = self.intoLocal_pts(pts=subject.points())
         is_beside = False
         side_gap = float('inf')
         if near_zone != SpatialPredicate.i:
@@ -1196,9 +1192,17 @@ class SpatialObject:
                         angle=theta
                     )
                     result.append(relation)
-
+        return result
+    
+    def _check_Assembly(self, subject: 'SpatialObject', result: List['SpatialRelation']) -> List['SpatialRelation']:
         # === 5. Assembly: Inside / Containing / Overlapping / Meeting ===
         # If all computed zones show the inside flag, add an 'inside' relation.
+        radius_sum = self.radius + subject.radius
+        theta = subject.angle - self.angle
+        center_distance = (subject.center - self.center).length()
+        can_not_overlap = center_distance > radius_sum
+        local_pts = self.intoLocal_pts(pts=subject.points())
+        zones = [self.sectorOf(point=pt, nearBy=False, epsilon=0.00001) for pt in local_pts]
         if all(zone.contains_flag(BBoxSectorFlags.i) for zone in zones):
             relation = SpatialRelation(
                 subject=subject,
@@ -1242,8 +1246,13 @@ class SpatialObject:
                         angle=theta
                     )
                     result.append(relation)
-
-        # === 6. Orientation Deduction ===
+        return result
+    
+    def _deduce_orientation(self, subject: 'SpatialObject', result: List['SpatialRelation']) -> List['SpatialRelation']:
+        theta = subject.angle - self.angle
+        local_center = self.intoLocal(pt=subject.center)
+        center_distance = (subject.center - self.center).length()
+        
         if abs(theta) < self.adjustment.maxAngleDelta:
             gap = float(local_center.z)
             relation = SpatialRelation(
@@ -1318,8 +1327,11 @@ class SpatialObject:
                     angle=theta
                 )
                 result.append(relation)
-
-        # === 7. Visibility Deduction (Clock Angle Predicates) ===
+        return result
+    
+    def _deduce_visibility(self, subject: 'SpatialObject', result: List['SpatialRelation']) -> List['SpatialRelation']:
+        center_distance = (subject.center - self.center).length()
+        
         if self.context and self.context.deduce.visibility:
             # Compute the observer-relative bearing.
             rad = math.atan2(subject.center.x, subject.center.z)
@@ -1363,6 +1375,47 @@ class SpatialObject:
                         angle=rad
                     )
                     result.append(relation)
+        return result
+        
+        
+
+    def topologies(self, subject: 'SpatialObject') -> List['SpatialRelation']:
+        result: List['SpatialRelation'] = []
+        theta = subject.angle - self.angle
+        center_distance = (subject.center - self.center).length()
+        radius_sum = self.radius + subject.radius
+        can_not_overlap = center_distance > radius_sum
+
+        # Compute local coordinates once for use below.
+        local_pts = self.intoLocal_pts(pts=subject.points())
+        local_center = self.intoLocal(pt=subject.center)
+        center_zone = self.sectorOf(point=local_center, nearBy=False, epsilon=-self.adjustment.maxGap)
+
+        # === 1. Same Center Relation ===
+        result = self._haveSameCenter(subject=subject, center_distance=center_distance, result=result)
+
+        # === 2. Near / Far Relation ===
+        result = self._areNearOrFar(subject=subject, center_distance=center_distance, result=result)
+
+        # Always add a disjoint relation if objects cannot overlap.
+        result = self._areDisjoint(subject=subject, center_distance=center_distance,can_not_overlap=can_not_overlap, result=result)
+
+        # === 3. Basic Adjacency by Center Zone (front/back/left/right/above/below) ===
+        result = self._basicAdjacency(subject=subject, center_zone=center_zone, result=result) 
+        # === 4. Side-related Adjacency Using "nearBy" Zone ===
+        # Recompute zone with nearBy flag to catch touching/beside relations.
+        result = self._catch_side_related_adjacency(subject=subject, result=result)
+        
+
+        # === 5. Assembly: Inside / Containing / Overlapping / Meeting ===
+        # If all computed zones show the inside flag, add an 'inside' relation.
+        result = self._check_Assembly(subject=subject, result=result)
+        
+        # === 6. Orientation Deduction ===
+        result = self._deduce_orientation(subject=subject, result=result)
+
+        # === 7. Visibility Deduction (Clock Angle Predicates) ===
+        result = self._deduce_visibility(subject=subject, result=result)
 
         return result
 
