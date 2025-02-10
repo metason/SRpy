@@ -247,7 +247,7 @@ class TestSpatialRelations(unittest.TestCase):
         """
         subject = SpatialObject(
             id="subj",
-            position=Vector3(x=0, y=-1.10, z=0.05),
+            position=Vector3(x=0, y=-1.10, z=0.00),
             width=1.0,
             height=1.0,
             depth=1.0
@@ -255,9 +255,9 @@ class TestSpatialRelations(unittest.TestCase):
         obj = SpatialObject(
             id="obj",
             position=Vector3(x=0, y=0.0, z=0),
-            width=1.1,
-            height=1.1,
-            depth=1.1
+            width=1.0,
+            height=1.0,
+            depth=1.0
         )
         relations = obj.relate(subject=subject, topology=True)
         self.print_relations(relations)
@@ -719,7 +719,10 @@ class TestSpatialRelations(unittest.TestCase):
         relations = obj.relate(subject=subject, comparison=True)
         self.print_relations(relations)
 
-        self.export_scene([obj, subject])
+        spatial_objects = [obj, subject]
+        export_filename = f"thinner.usdz"
+        self.exporter = SceneExporter(self.temp_dir)
+        self.exporter.exportUSDZ(spatial_objects, export_filename)
 
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.thinner, predicates)
@@ -747,7 +750,11 @@ class TestSpatialRelations(unittest.TestCase):
         relations = obj.relate(subject=subject, comparison=True)
         self.print_relations(relations)
 
-        self.export_scene([obj, subject])
+        spatial_objects = [obj, subject]
+        export_filename = f"corners.usdz"
+        self.exporter = SceneExporter(self.temp_dir)
+        self.exporter.exportUSDZ(spatial_objects, export_filename)
+        
 
     def test_thin_ratio_edge_case(self):
         """

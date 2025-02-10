@@ -347,13 +347,9 @@ class TestSpatialObjectSpatialRelations(unittest.TestCase):
 
     def test_containing_relation(self):
         # obj1 is contained within obj2
-        self.obj1.width = 2.0
-        self.obj1.height = 2.0
-        self.obj1.depth = 2.0
-        self.obj2.width = 5.0
-        self.obj2.height = 5.0
-        self.obj2.depth = 5.0
-        relations = self.obj2.topologies(self.obj1)
+        obj1 = SpatialObject(id="obj1", position= Vector3(0.0, 0.2,0.0), width=0.5, height=0.5, depth=0.5)
+        obj2 = SpatialObject(id="obj2", position= Vector3(0.0, 0.0,0.0), width=1.0, height=1.0, depth=1.0)
+        relations = obj1.topologies(obj2)
         for relation in relations:
             print("relations: ",relation.desc())
         containing_rel = next((rel for rel in relations if rel.predicate == SpatialPredicate.containing), None)
