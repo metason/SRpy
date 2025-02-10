@@ -1210,7 +1210,8 @@ class SpatialObject:
             result.append(relation)
         else:
             # If self completely encloses subject, add a 'containing' relation.
-            if self.width > subject.width and self.height > subject.height and self.depth > subject.depth:
+            if  ((subject.radius - self.radius) > (center_distance / 2.0)) and (subject.width > self.width) and (subject.height > self.height) and (subject.depth > self.depth ):
+                
                 relation = SpatialRelation(
                     subject=subject,
                     predicate=SpatialPredicate.containing,
