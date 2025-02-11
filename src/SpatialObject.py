@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING
 import logging
 
 from .Vector3 import Vector3
+from .Vector2 import Vector2
 from .SpatialBasics import (
     NearbySchema,
     SectorSchema,
@@ -768,10 +769,10 @@ class SpatialObject:
         ]
 
     def points(self, local: bool = False) -> List[Vector3]:
-        p0 = Vector3(self.width / 2.0, self.depth / 2.0, 0.0)
-        p1 = Vector3(-self.width / 2.0, self.depth / 2.0, 0.0)
-        p2 = Vector3(-self.width / 2.0, -self.depth / 2.0, 0.0)
-        p3 = Vector3(self.width / 2.0, -self.depth / 2.0, 0.0)
+        p0 = Vector2(self.width / 2.0, self.depth / 2.0)
+        p1 = Vector2(-self.width / 2.0, self.depth / 2.0)
+        p2 = Vector2(-self.width / 2.0, -self.depth / 2.0)
+        p3 = Vector2(self.width / 2.0, -self.depth / 2.0)
         vector = Vector3()
 
         if not local:
@@ -782,14 +783,14 @@ class SpatialObject:
             vector = self.position
 
         return [
-            Vector3(p0.x + vector.x, vector.y, p0.z + vector.z),
-            Vector3(p1.x + vector.x, vector.y, p1.z + vector.z),
-            Vector3(p2.x + vector.x, vector.y, p2.z + vector.z),
-            Vector3(p3.x + vector.x, vector.y, p3.z + vector.z),
-            Vector3(p0.x + vector.x, vector.y + self.height, p0.z + vector.z),
-            Vector3(p1.x + vector.x, vector.y + self.height, p1.z + vector.z),
-            Vector3(p2.x + vector.x, vector.y + self.height, p2.z + vector.z),
-            Vector3(p3.x + vector.x, vector.y + self.height, p3.z + vector.z)
+            Vector3(p0.x + vector.x, vector.y, p0.y + vector.z),
+            Vector3(p1.x + vector.x, vector.y, p1.y + vector.z),
+            Vector3(p2.x + vector.x, vector.y, p2.y + vector.z),
+            Vector3(p3.x + vector.x, vector.y, p3.y + vector.z),
+            Vector3(p0.x + vector.x, vector.y + self.height, p0.y + vector.z),
+            Vector3(p1.x + vector.x, vector.y + self.height, p1.y + vector.z),
+            Vector3(p2.x + vector.x, vector.y + self.height, p2.y + vector.z),
+            Vector3(p3.x + vector.x, vector.y + self.height, p3.y + vector.z)
         ]
 
     # Distance Methods
@@ -1050,14 +1051,17 @@ class SpatialObject:
             result.append(relation)
         return result
         
-    def _catch_side_related_adjacency(self, subject: 'SpatialObject', result: List['SpatialRelation']) -> List['SpatialRelation']:
+    def _catch_side_related_adjacency(self, subject: 'SpatialObject', result: List['SpatialRelation']) -> tuple[bool, List['SpatialRelation']]:
         theta = subject.angle - self.angle
         local_center = self.intoLocal(pt=subject.center)
         near_zone = self.sectorOf(point=local_center, nearBy=True, epsilon=-self.adjustment.maxGap)
         local_pts = self.intoLocal_pts(pts=subject.points())
         is_beside = False
+        aligned = False
         side_gap = float('inf')
         if near_zone != SpatialPredicate.i:
+            if abs(math.fmod(theta, math.pi/2.0)) < self.adjustment.maxAngleDelta:
+                aligned = True
             # Check left/right sides.
             if SpatialPredicate.l in near_zone:
                 for pt in local_pts:
@@ -1192,18 +1196,27 @@ class SpatialObject:
                         angle=theta
                     )
                     result.append(relation)
-        return result
+        return aligned, result
     
-    def _check_Assembly(self, subject: 'SpatialObject', result: List['SpatialRelation']) -> List['SpatialRelation']:
+    def _check_Assembly(self, subject: 'SpatialObject', result: List['SpatialRelation'],aligned=False) -> List['SpatialRelation']:
         # === 5. Assembly: Inside / Containing / Overlapping / Meeting ===
         # If all computed zones show the inside flag, add an 'inside' relation.
         radius_sum = self.radius + subject.radius
         theta = subject.angle - self.angle
         center_distance = (subject.center - self.center).length()
         can_not_overlap = center_distance > radius_sum
+
+        # Convert subject points to local coordinates.
         local_pts = self.intoLocal_pts(pts=subject.points())
         zones = [self.sectorOf(point=pt, nearBy=False, epsilon=0.00001) for pt in local_pts]
+
+        # Flags used to decide if we will later add connectivity or a disjoint relation.
+        is_disjoint = True
+        is_connected = False
+
+        # --- Case 1: All zones show the inside flag.
         if all(zone.contains_flag(BBoxSectorFlags.i) for zone in zones):
+            is_disjoint = False
             relation = SpatialRelation(
                 subject=subject,
                 predicate=SpatialPredicate.inside,
@@ -1212,10 +1225,24 @@ class SpatialObject:
                 angle=theta
             )
             result.append(relation)
+            # If connectivity is enabled add an additional 'in' relation.
+            if self.context:
+                if self.context.deduce.connectivity:
+                    relation = SpatialRelation(
+                        subject=subject,
+                        predicate=SpatialPredicate.in_,
+                        object=self,
+                        delta=center_distance,
+                        angle=theta
+                    )
+                    result.append(relation)
         else:
-            # If self completely encloses subject, add a 'containing' relation.
-            if  ((subject.radius - self.radius) > (center_distance / 2.0)) and (subject.width > self.width) and (subject.height > self.height) and (subject.depth > self.depth ):
-                
+            # --- Case 2: If self completely encloses subject, add a 'containing' relation.
+            if ((subject.radius - self.radius) > (center_distance / 2.0) and
+                subject.width > self.width and
+                subject.height > self.height and
+                subject.depth > self.depth):
+                is_disjoint = False
                 relation = SpatialRelation(
                     subject=subject,
                     predicate=SpatialPredicate.containing,
@@ -1225,9 +1252,10 @@ class SpatialObject:
                 )
                 result.append(relation)
             else:
-                # If there is partial overlap, add an 'overlapping' relation.
+                # --- Case 3: Partial overlap.
                 cnt = sum(1 for zone in zones if zone.contains_flag(BBoxSectorFlags.i))
                 if cnt > 0 and not can_not_overlap:
+                    is_disjoint = False
                     relation = SpatialRelation(
                         subject=subject,
                         predicate=SpatialPredicate.overlapping,
@@ -1236,16 +1264,192 @@ class SpatialObject:
                         angle=theta
                     )
                     result.append(relation)
-                # If centers are very close (indicating contact), add a 'meeting' relation.
-                if center_distance < self.adjustment.maxGap:
-                    relation = SpatialRelation(
-                        subject=subject,
-                        predicate=SpatialPredicate.meeting,
-                        object=self,
-                        delta=center_distance,
-                        angle=theta
-                    )
-                    result.append(relation)
+
+                # --- Compute the bounding box of the local points.
+                # Assume local_pts is non-empty.
+                min_y = min(pt.y for pt in local_pts)
+                max_y = max(pt.y for pt in local_pts)
+                min_y = local_pts[0].y
+                max_y = local_pts[-1].y
+                min_x = min(pt.x for pt in local_pts)
+                max_x = max(pt.x for pt in local_pts)
+                min_z = min(pt.z for pt in local_pts)
+                max_z = max(pt.z for pt in local_pts)
+
+                # --- Check for "crossing" conditions.
+                crossings = 0
+                if not can_not_overlap:
+                    if (min_x < -self.width/2.0 and max_x > self.width/2.0 and
+                        min_z < self.depth/2.0 and max_z > -self.depth/2.0 and
+                        min_y < self.height and max_y > 0):
+                        crossings += 1
+                    if (min_z < -self.depth/2.0 and max_z > self.depth/2.0 and
+                        min_x < self.width/2.0 and max_x > -self.width/2.0 and
+                        min_y < self.height and max_y > 0):
+                        crossings += 1
+                    if (min_y < 0.0 and max_y > self.height and
+                        min_x < self.width/2.0 and max_x > -self.width/2.0 and
+                        min_z < self.depth/2.0 and max_z > -self.depth/2.0):
+                        crossings += 1
+
+                    if crossings > 0:
+                        is_disjoint = False
+                        relation = SpatialRelation(
+                            subject=subject,
+                            predicate=SpatialPredicate.crossing,
+                            object=self,
+                            delta=center_distance,
+                            angle=theta
+                        )
+                        result.append(relation)
+
+                # --- Compute overlaps along each axis.
+                # Y-overlap (ylap):
+                ylap = self.height
+                if max_y < self.height and min_y > 0:
+                    ylap = max_y - min_y
+                else:
+                    if min_y > 0:
+                        ylap = abs(self.height - min_y)
+                    else:
+                        ylap = abs(max_y)
+
+                # X-overlap (xlap):
+                xlap = self.width
+                if (min_x < (self.width/2.0 + self.adjustment.maxGap)) and (max_x > (-self.width/2.0 - self.adjustment.maxGap)):
+                    if (max_x < self.width/2.0) and (min_x > -self.width/2.0):
+                        xlap = max_x - min_x
+                    else:
+                        if min_x > (-self.width/2.0 - self.adjustment.maxGap):
+                            xlap = abs(self.width/2.0 - min_x)
+                        else:
+                            xlap = abs(max_x + self.width/2.0)
+                else:
+                    xlap = -1
+
+                # Z-overlap (zlap):
+                zlap = self.depth
+                if min_z < (self.depth/2.0 + self.adjustment.maxGap) and max_z > (-self.depth/2.0 - self.adjustment.maxGap):
+                    if (max_z < self.depth/2.0) and( min_z > -self.depth/2.0):
+                        zlap = max_z - min_z
+                    else:
+                        if min_z > (-self.depth/2.0):
+                            zlap = abs(self.depth/2.0 - min_z)
+                        else:
+                            zlap = abs(max_z + self.depth/2.0)
+                else:
+                    zlap = -1
+
+                # --- Determine contact or meeting relations.
+                if (min_y < (self.height + self.adjustment.maxGap)) and (max_y > (-self.adjustment.maxGap)):
+                    gap = min(xlap, zlap)
+                    # First, try a "touching" relation when the boxes are not aligned,
+                    # subject cannot overlap self, and gap is positive but less than maxGap.
+                    if (not aligned and can_not_overlap and gap > 0.0 and gap < self.adjustment.maxGap):
+                        if (max_x < ((-self.width/2.0) + self.adjustment.maxGap) or
+                            min_x > ((self.width/2.0) - self.adjustment.maxGap) or
+                            max_z < ((-self.depth/2.0) + self.adjustment.maxGap) or
+                            min_z > ((self.depth/2.0) - self.adjustment.maxGap)):
+                            relation = SpatialRelation(
+                                subject=subject,
+                                predicate=SpatialPredicate.touching,
+                                object=self,
+                                delta=gap,
+                                angle=theta
+                            )
+                            result.append(relation)
+                            if (not is_connected and
+                                (self.context is not None) and self.context.deduce.connectivity):
+                                relation = SpatialRelation(
+                                    subject=subject,
+                                    predicate=SpatialPredicate.by,
+                                    object=self,
+                                    delta=gap,
+                                    angle=theta
+                                )
+                                result.append(relation)
+                                is_connected = True
+                        else:
+                            print(f"OOPS, rotated bbox might cross: assembly relations by shortest distance not yet implemented! {subject.id} - ? - {self.id}")
+                    else:
+                        # When boxes are aligned.
+                        if xlap >= 0.0 and zlap >= 0.0:
+                            # If there is extra overlap in Y (indicating one object is beside the other)
+                            # and gap is less than maxGap, decide between meeting and touching.
+                            if ylap > self.adjustment.maxGap and gap < self.adjustment.maxGap:
+                                if xlap > self.adjustment.maxGap or zlap > self.adjustment.maxGap:
+                                    relation = SpatialRelation(
+                                        subject=subject,
+                                        predicate=SpatialPredicate.meeting,
+                                        object=self,
+                                        delta=max(xlap, zlap),
+                                        angle=theta
+                                    )
+                                    result.append(relation)
+                                    if (not is_connected and
+                                        (self.context is not None) and self.context.deduce.connectivity and
+                                        subject.volume < self.volume):
+                                        relation = SpatialRelation(
+                                            subject=subject,
+                                            predicate=SpatialPredicate.at,
+                                            object=self,
+                                            delta=gap,
+                                            angle=theta
+                                        )
+                                        result.append(relation)
+                                        is_connected = True
+                                else:
+                                    relation = SpatialRelation(
+                                        subject=subject,
+                                        predicate=SpatialPredicate.touching,
+                                        object=self,
+                                        delta=gap,
+                                        angle=theta
+                                    )
+                                    result.append(relation)
+                                    if (not is_connected and
+                                        (self.context is not None) and  self.context.deduce.connectivity):
+                                        relation = SpatialRelation(
+                                            subject=subject,
+                                            predicate=SpatialPredicate.by,
+                                            object=self,
+                                            delta=gap,
+                                            angle=theta
+                                        )
+                                        result.append(relation)
+                                        is_connected = True
+                            else:
+                                gap = ylap
+                                if xlap > self.adjustment.maxGap and zlap > self.adjustment.maxGap:
+                                    relation = SpatialRelation(
+                                        subject=subject,
+                                        predicate=SpatialPredicate.meeting,
+                                        object=self,
+                                        delta=gap,
+                                        angle=theta
+                                    )
+                                    result.append(relation)
+                                else:
+                                    relation = SpatialRelation(
+                                        subject=subject,
+                                        predicate=SpatialPredicate.touching,
+                                        object=self,
+                                        delta=gap,
+                                        angle=theta
+                                    )
+                                    result.append(relation)
+
+        # --- If nothing has been marked as overlapping (or any other relation), mark as disjoint.
+        if is_disjoint:
+            gap = center_distance
+            relation = SpatialRelation(
+                subject=subject,
+                predicate=SpatialPredicate.disjoint,
+                object=self,
+                delta=gap,
+                angle=theta
+            )
+            result.append(relation)
         return result
     
     def _deduce_orientation(self, subject: 'SpatialObject', result: List['SpatialRelation']) -> List['SpatialRelation']:
@@ -1331,8 +1535,9 @@ class SpatialObject:
     
     def _deduce_visibility(self, subject: 'SpatialObject', result: List['SpatialRelation']) -> List['SpatialRelation']:
         center_distance = (subject.center - self.center).length()
-        
-        if self.context and self.context.deduce.visibility:
+        if self.context is None: 
+            return result
+        if self.context.deduce.visibility:
             # Compute the observer-relative bearing.
             rad = math.atan2(subject.center.x, subject.center.z)
             angle_deg = rad * 180.0 / math.pi
@@ -1375,6 +1580,7 @@ class SpatialObject:
                         angle=rad
                     )
                     result.append(relation)
+        print("*************************************************************************************************************")
         return result
         
         
@@ -1388,6 +1594,7 @@ class SpatialObject:
 
         # Compute local coordinates once for use below.
         local_pts = self.intoLocal_pts(pts=subject.points())
+        local_pts = [self.intoLocal(pt=pt) for pt in subject.points()]
         local_center = self.intoLocal(pt=subject.center)
         center_zone = self.sectorOf(point=local_center, nearBy=False, epsilon=-self.adjustment.maxGap)
 
@@ -1404,12 +1611,12 @@ class SpatialObject:
         result = self._basicAdjacency(subject=subject, center_zone=center_zone, result=result) 
         # === 4. Side-related Adjacency Using "nearBy" Zone ===
         # Recompute zone with nearBy flag to catch touching/beside relations.
-        result = self._catch_side_related_adjacency(subject=subject, result=result)
+        (aligned, result) = self._catch_side_related_adjacency(subject=subject, result=result)
         
 
         # === 5. Assembly: Inside / Containing / Overlapping / Meeting ===
         # If all computed zones show the inside flag, add an 'inside' relation.
-        result = self._check_Assembly(subject=subject, result=result)
+        result = self._check_Assembly(subject=subject, result=result,aligned=aligned)
         
         # === 6. Orientation Deduction ===
         result = self._deduce_orientation(subject=subject, result=result)
