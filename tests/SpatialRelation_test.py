@@ -42,6 +42,7 @@ from src.SpatialPredicate import (
 from src.SpatialRelation import SpatialRelation
 from src.SpatialObject import SpatialObject
 from src.BBoxSector import BBoxSector, BBoxSectorFlags
+from src.SpatialReasoner import SpatialReasoner
 
 
 class TestSpatialRelations(unittest.TestCase):
@@ -346,6 +347,8 @@ class TestSpatialRelations(unittest.TestCase):
             height=1.0,
             depth=1.0
         )
+        spatial_reasoner = SpatialReasoner()
+        spatial_reasoner.load([obj, subject])
         relations = obj.relate(subject=subject, topology=True)
         self.print_relations(relations)
 
@@ -420,6 +423,7 @@ class TestSpatialRelations(unittest.TestCase):
         """
         Test that a subject is touching and beside an object.
         """
+        # Create the subject with the same properties as in Swift.
         subject = SpatialObject(
             id="subj",
             position=Vector3(x=0.83, y=0, z=-0.2),
@@ -427,7 +431,9 @@ class TestSpatialRelations(unittest.TestCase):
             height=0.8,
             depth=0.5
         )
-        subject.setYaw(math.radians(0.0))
+        subject.setYaw(45.0)  # Set yaw to 45 degrees, as in the Swift test.
+
+        # Create the object.
         obj = SpatialObject(
             id="obj",
             position=Vector3(x=0, y=0, z=0),
@@ -435,44 +441,56 @@ class TestSpatialRelations(unittest.TestCase):
             height=1.0,
             depth=1.0
         )
+
+        # Compute the spatial relations.
         relations = obj.relate(subject=subject, topology=True)
         self.print_relations(relations)
 
+        # Optionally export the scene for visualization.
         spatial_objects = [subject, obj]
-        export_filename = f"touching.usdz"
+        export_filename = "touching.usdz"
         self.exporter = SceneExporter(self.temp_dir)
         self.exporter.exportUSDZ(spatial_objects, export_filename)
 
+        # Verify that both 'touching' and 'beside' predicates are present.
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.touching, predicates)
         self.assertIn(SpatialPredicate.beside, predicates)
 
     def test_meeting(self):
         """
-        Test that a subject is meeting an object.
+        Test that the subject is meeting the object.
         """
+        # Create the subject with the same properties as in Swift.
         subject = SpatialObject(
             id="subj",
-            position=Vector3(x=1, y=1, z=1),
-            width=0.5,
-            height=0.5,
+            position=Vector3(x=0.76, y=0, z=-0.5),
+            width=0.8,
+            height=0.8,
             depth=0.5
         )
+        subject.setYaw(90.0)  # Rotate the subject 90 degrees around the yaw axis.
+
+        # Create the object (the reference spatial object).
         obj = SpatialObject(
             id="obj",
-            position=Vector3(x=0, y=1, z=0),
-            width=0.50,
-            height=0.50,
-            depth=0.50
+            position=Vector3(x=0, y=0, z=0),
+            width=1.0,
+            height=1.0,
+            depth=1.0
         )
+
+        # Compute the spatial relations between object and subject.
         relations = obj.relate(subject=subject, topology=True)
         self.print_relations(relations)
 
+        # Optionally export the scene for visualization.
         spatial_objects = [subject, obj]
-        export_filename = f"meeting.usdz"
+        export_filename = "meeting.usdz"
         self.exporter = SceneExporter(self.temp_dir)
         self.exporter.exportUSDZ(spatial_objects, export_filename)
-        
+
+        # Verify that the 'meeting' predicate is among the computed relations.
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.meeting, predicates)
 
@@ -660,6 +678,14 @@ class TestSpatialRelations(unittest.TestCase):
             position=Vector3(x=0, y=0, z=0),
             name="user"
         )
+        spatial_reasoner = SpatialReasoner()
+        spatial_reasoner.load([subject, observer])
+        pipeline = """
+            deduce(topology visibility)
+            | log(base 3D left right seenleft seenright)
+        """
+        spatial_reasoner.run(pipeline)
+        
         relations = observer.relate(subject=subject, topology=True)
         self.print_relations(relations)
 
@@ -687,6 +713,15 @@ class TestSpatialRelations(unittest.TestCase):
             position=Vector3(x=0, y=0, z=0),
             name="user"
         )
+        
+        spatial_reasoner = SpatialReasoner()
+        spatial_reasoner.load([subject, observer])
+        pipeline = """
+            deduce(topology visibility)
+            | log(base 3D left right seenleft seenright)
+        """
+        spatial_reasoner.run(pipeline)
+        
         relations = observer.relate(subject=subject, topology=True)
         self.print_relations(relations)
 
