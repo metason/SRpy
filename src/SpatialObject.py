@@ -629,7 +629,7 @@ class SpatialObject:
         max_val = max(values) if values else 0.0
         min_val = min(values) if values else 0.0
         if max_val >= (min_val * ratio):
-            if (width == min_val) and (width > (ratio * min_val)) and (depth > (ratio * min_val)):
+            if (height == min_val) and (width > (ratio * min_val)) and (depth > (ratio * min_val)):
                 return 2
             if (width == min_val )and (height > (ratio * min_val)) and (depth > (ratio * min_val)):
                 return 1
