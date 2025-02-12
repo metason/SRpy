@@ -844,26 +844,22 @@ class TestSpatialObjectUtilityMethods(unittest.TestCase):
         pipeline = """
             deduce(topology visibility)
             | log(base 3D left right seenleft seenright)
-        """
-
-    def test_main_direction(self):
-        # Initial dimensions: width=2.0, height=4.0, depth=6.0
-        # Dominant dimension: depth (0)
-        self.assertEqual(self.obj.mainDirection(), 3)  # Depth is dominant
-
-        # Change dimensions: width=1.0, height=4.0, depth=1.0
-        # Dominant dimension: height (2)
+        """  
+    def test_main_direction_deep(self):
+        self.obj.depth = 25.0
+        self.assertEqual(self.obj.mainDirection(), 3)
+        
+    def test_main_direction_tall(self):
         self.obj.width = 1.0
         self.obj.height = 4.0
         self.obj.depth = 1.0
-        self.assertEqual(self.obj.mainDirection(), 2)  # Height is dominant
-
-        # Change dimensions: width=5.0, height=2.0, depth=2.0
-        # Dominant dimension: width (1)
-        self.obj.width = 5.0
+        self.assertEqual(self.obj.mainDirection(), 2)
+        
+    def test_main_direction_wide(self):
+        self.obj.width = 8.0
         self.obj.height = 2.0
         self.obj.depth = 2.0
-        self.assertEqual(self.obj.mainDirection(), 1)  # Width is dominant
+        self.assertEqual(self.obj.mainDirection(), 1)
 
     def test_thin_ratio(self):
         self.assertFalse(self.obj.thin)
@@ -873,11 +869,30 @@ class TestSpatialObjectUtilityMethods(unittest.TestCase):
         self.assertTrue(self.obj.thin)
 
     def test_long_ratio(self):
-        self.assertEqual(self.obj.long_ratio(), 3)
-        self.obj.width = 1.0
-        self.obj.height = 5.0
-        self.obj.depth = 1.0
-        self.assertEqual(self.obj.long_ratio(), 2)
+        obj = SpatialObject("deep_obj", Vector3(0.0, 0.0, 0.0), 1.0, 1.0, 10.0)
+        self.assertEqual(obj.long_ratio(), 3)
+        obj = SpatialObject("tall_obj", Vector3(0.0, 0.0, 0.0), 1.0, 10.0, 1.0)
+        self.assertEqual(obj.long_ratio(), 2)
+        
+    def test_long_ratio_deep(self):
+        obj = SpatialObject("deep_obj", Vector3(0.0, 0.0, 0.0), 1.0, 1.0, 10.0)
+        self.assertEqual(obj.long_ratio(), 3)
+    
+    def test_long_ratio_tall(self):
+        obj = SpatialObject("tall_obj", Vector3(0.0, 0.0, 0.0), 1.0, 10.0, 1.0)
+        self.assertEqual(obj.long_ratio(), 2)
+    
+    def test_long_ratio_wide(self):
+        obj = SpatialObject("wide_obj", Vector3(0.0, 0.0, 0.0), 10.0, 1.0, 1.0)
+        self.assertEqual(obj.long_ratio(), 1)
+    
+    def test_long_ratio_equal(self):
+        obj = SpatialObject("equal_obj", Vector3(0.0, 0.0, 0.0), 1.0, 1.0, 1.0)
+        self.assertEqual(obj.long_ratio(), 0)
+    
+    def test_long_ratio_zero(self):
+        obj = SpatialObject("zero_obj", Vector3(0.0, 0.0, 0.0), 0.0, 0.0, 0.0)
+        self.assertEqual(obj.long_ratio(), 0)
 
     def test_yaw_property(self):
         self.obj.angle = math.pi
@@ -949,6 +964,7 @@ class TestSpatialObjectSerializationAndDeserialization(unittest.TestCase):
         spatial_reasoner.load([original_obj])
         obj_dict = original_obj.asDict()
         new_obj = self.new_obj
+        print("obj_dict: ",obj_dict)
         new_obj.fromAny(obj_dict)
         self.spatial_reasoner.load([original_obj,new_obj])
 
