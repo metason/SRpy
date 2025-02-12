@@ -213,7 +213,7 @@ class SpatialReasoner:
                 self.deduce_categories(content)
             else:
                 input_chain = self.chain[-1].output if self.chain else indices
-                inference = SpatialInference(input=input_chain, operation=op, reasoner=self)
+                inference = SpatialInference(input_indices=input_chain, operation=op, fact=self)
                 self.record(inference)
                 if inference.has_failed():
                     self.log_error()

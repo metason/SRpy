@@ -98,7 +98,6 @@ class SpatialObject:
         self.immobile: bool = False
         self.velocity: Vector3 = Vector3()  # velocity vector
         self.confidence: ObjectConfidence = ObjectConfidence()
-        self.confidence.setSpatial(confidence)
         self.confidence.setValue(confidence)
         self.shape: ObjectShape = ObjectShape.unknown
         self.visible: bool = False  # in screen
@@ -139,11 +138,12 @@ class SpatialObject:
 
     @property
     def azimuth(self) -> float:
-        # in degrees clockwise of GCS as ±360°
-        if self.context is not None and self.context.north is not None:
-            north_angle = math.degrees(math.atan2(self.context.north.y, self.context.north.x))
-            return -((self.yaw + north_angle - 90.0) % 360.0)
-        return 
+        if self.context is None or self.context.north is None:
+            return 0.0
+        north_angle = math.degrees(math.atan2(self.context.north.x, self.context.north.y))
+        # Use math.fmod to replicate Swift's truncatingRemainder(dividingBy:)
+        return -math.fmod(self.yaw + north_angle - 90.0, 360.0)
+
     
     @property
     def thin(self) -> bool:
@@ -418,6 +418,8 @@ class SpatialObject:
     # Object Serialization
     # Full-fledged representation for fact base
     def asDict(self) -> Dict[str, Any]:
+        print("asDict called")
+        print("existence:", self.existence)
         output = {
             "id": self.id,
             "existence": self.existence.value,
@@ -544,16 +546,16 @@ class SpatialObject:
             
 
             # Cause and Existence Handling
-            cause_str = input_data.get("cause", self.cause.value)
+            cause_str = input_data.get("cause", self.cause)
             self.cause = ObjectCause.named(cause_str)
-            existence_str = input_data.get("existence", self.existence.value)
+            existence_str = input_data.get("existence", self.existence)
             self.existence = SpatialExistence.named(existence_str)
 
             # Immobile Handling
             self.immobile = bool(input_data.get("immobile", self.immobile))
 
             # Shape Handling
-            shape_str = input_data.get("shape", self.shape.value)
+            shape_str = input_data.get("shape", self.shape)
             self.shape = ObjectShape.named(shape_str)
 
             # Look Handling
@@ -624,10 +626,27 @@ class SpatialObject:
     def mainDirection(self) -> int:
         return self.long_ratio()
 
+    def long_ratio(self, ratio: float = defaultAdjustment.longRatio) -> int:
+        values = (width,height,depth) = [self.width, self.height, self.depth]
+        max_val = max(values) if values else 0.0
+        min_val = min(values) if values else 0.0
+        #not long in any direction        
+        if not (max_val > 0 and max_val >= min_val * ratio): 
+            return 0
+        # if depth is the longest side
+        if depth == max_val: 
+            return 3
+        # if height is the longest side
+        if height == max_val: 
+            return 2
+        # if width is the longest side
+        return 1
+            
     def thin_ratio(self, ratio: float = defaultAdjustment.thinRatio) -> int:
         values = (width,height,depth) = [self.width, self.height, self.depth]
         max_val = max(values) if values else 0.0
         min_val = min(values) if values else 0.0
+        min_ratio = min_val * ratio
         if max_val >= (min_val * ratio):
             if (height == min_val) and (width > (ratio * min_val)) and (depth > (ratio * min_val)):
                 return 2
@@ -635,26 +654,6 @@ class SpatialObject:
                 return 1
             if (depth == min_val) and (width > (ratio * min_val)) and (height > (ratio * min_val)):
                 return 3
-        return 0
-
-    def long_ratio(self, ratio: float = 0.5) -> int:  # Set default explicitly
-        values = [self.width, self.height, self.depth]
-        max_val = max(values) if values else 0.0
-        min_val = min(values) if values else 0.0
-        logging.debug(f"long_ratio called with ratio={ratio}, max_val={max_val}, min_val={min_val}")
-        if max_val > 0.0 and max_val >= min_val * ratio:
-            logging.debug("Condition max_val >= min_val * ratio met")
-            if self.width < max_val:
-                if self.height < max_val:
-                    logging.debug("Returning 3")
-                    return 3
-                else:
-                    logging.debug("Returning 2")
-                    return 2
-            else:
-                logging.debug("Returning 1")
-                return 1
-        logging.debug("Condition max_val >= min_val * ratio not met, returning 0")
         return 0
 
     # Point Calculation Methods

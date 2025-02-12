@@ -1,6 +1,40 @@
 import datetime
 from typing import List, Dict, Optional, Any
+import keyword
 import re
+from .SpatialObject import SpatialObject
+from src.SpatialBasics import (
+    NearbySchema,
+    SectorSchema,
+    SpatialAdjustment,
+    SpatialPredicateCategories,
+    ObjectConfidence,
+    SpatialAtribute,
+    SpatialExistence,
+    ObjectCause,
+    MotionState,
+    ObjectShape,
+    ObjectHandling,
+    defaultAdjustment
+)
+from src.SpatialPredicate import (
+    SpatialPredicate,
+    PredicateTerm,
+    SpatialTerms,
+    proximity,
+    directionality,
+    adjacency,
+    orientations,
+    assembly,
+    topology,
+    contacts,
+    connectivity,
+    comparability,
+    similarity,
+    visibility,
+    geography,
+    sectors,
+)
 
 # Placeholder imports for dependencies.
 # Ensure that these classes are properly defined in your Python project.
@@ -442,28 +476,72 @@ class SpatialInference:
     def attribute_predicate(condition: str) -> Optional[Any]:
         """
         Convert a condition string into a callable predicate function.
-        For security reasons, using eval is dangerous. Consider using a safe parser.
+        The condition string is expected to refer to object attributes (e.g. 
+        "label == 'Wall' and confidence.label > 0.7") and may include quoted string 
+        literals (e.g. "'Wall'").
+        
+        This method leaves quoted string literals untouched while processing other tokens:
+        - Boolean operators ("and", "or", "not") are forced to lowercase.
+        - Tokens that are not Python keywords, numeric literals, or built-in constants
+            are replaced with dictionary accesses. For dot-separated tokens (e.g. 
+            "confidence.label"), a chain of .get() calls is built.
+        
+        Returns a lambda function that takes an object (a dict or an object with asDict())
+        and returns the evaluated boolean.
         """
         try:
-            # Replace attribute names with dictionary access
-            # e.g., "width > 2" becomes "obj['width'] > 2"
-            # Assuming all attributes are accessed via 'obj'
-            # This is a simplistic approach and may need to be expanded
-            pattern = re.compile(r'\b\w+\b')
-            condition_converted = pattern.sub(lambda match: f"obj.get('{match.group(0)}', 0)", condition)
-            # Compile the condition into a lambda function
-            predicate = eval(f"lambda obj: {condition_converted}", {"__builtins__": {}})
+            def is_number(s: str) -> bool:
+                try:
+                    float(s)
+                    return True
+                except ValueError:
+                    return False
+
+            def token_repl(match: re.Match) -> str:
+                token = match.group(0)
+                token_lower = token.lower().strip()
+                # Force boolean operators to lowercase.
+                if token_lower in {"and", "or", "not"}:
+                    return token_lower
+                # Do not change Python keywords or built-in constants.
+                if token in keyword.kwlist or token in {"True", "False", "None"}:
+                    return token
+                # Do not change numeric literals.
+                if is_number(token):
+                    return token
+                # If the token contains a dot, build a nested dictionary lookup.
+                if '.' in token:
+                    parts = token.split('.')
+                    # For the first part, use an empty dict as default (since we expect a dict)
+                    expr = f"obj.get('{parts[0]}', {{}})"
+                    for sub in parts[1:]:
+                        expr += f".get('{sub}', 0)"
+                    return expr
+                # Otherwise, replace the token with a simple lookup.
+                return f"obj.get('{token}', 0)"
+
+            condition = condition.strip()
+            parts = re.split(r"('.*?')", condition)
+            processed_parts = []
+            token_pattern = r'\b(?:\w+\.)*\w+\b'
+            for i, part in enumerate(parts):
+                # Odd indices are quoted strings—leave them as is.
+                if i % 2 == 1:
+                    processed_parts.append(part)
+                else:
+                    processed_parts.append(re.sub(token_pattern, token_repl, part))
+            condition_converted = "".join(processed_parts)
+            compiled_expr = compile(condition_converted, '<string>', 'eval')
+            predicate = lambda obj: eval(
+                compiled_expr,
+                {"__builtins__": {}},
+                {"obj": obj.asDict() if hasattr(obj, "asDict") and callable(obj.asDict) else obj}
+            )
             return predicate
         except Exception as e:
             print(f"Error creating attribute predicate: {e}")
             return None
 
-    @staticmethod
-    def extract_keywords(text: str) -> List[str]:
-        """
-        Extract lowercase letter sequences as keywords from a given text.
-        """
-        return re.findall(r'\b[a-z]+\b', text)
 
 # Helper function to safely evaluate expressions
 def safe_eval(expression: str, variables: Dict[str, Any]) -> Any:

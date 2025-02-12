@@ -107,7 +107,6 @@ class ObjectConfidence:
         self.pose = value
         self.dimension = value
         self.label = value
-
     @property
     def spatial(self) -> float:
         return (self.pose + self.dimension) / 2.0
