@@ -172,7 +172,7 @@ class SpatialReasoner:
         """
         self.chain.append(inference)
         chain_list = self.base.get("chain", [])
-        chain_list.append(inference.as_dict())
+        chain_list.append(inference.asDict())
         self.base["chain"] = chain_list
 
     def backtrace(self) -> List[int]:
@@ -216,6 +216,7 @@ class SpatialReasoner:
                 inference = SpatialInference(input_indices=input_chain, operation=op, fact=self)
                 self.record(inference)
                 if inference.has_failed():
+                    print("Inference Error:", inference.error)
                     self.log_error()
                     break
 
@@ -524,7 +525,7 @@ class SpatialReasoner:
         # Determine log file name
         multiple_logs = self.pipeline.count("log(") > 2
         counter_str = str(self.logCnt) if multiple_logs else ""
-        log_filename = f"log{counter_str}.md"
+        log_filename = f"log{counter_str}{self.pipeline}.md"
         log_path = self.logFolder / log_filename
 
         # Write Markdown to file

@@ -567,7 +567,7 @@ class SpatialInference:
         ops = ["filter", "pick", "select", "produce", "slice", "map"]
         return any(self.operation.startswith(op + "(") for op in ops)
 
-    def as_dict(self) -> Dict[str, Any]:
+    def asDict(self) -> Dict[str, Any]:
         """Return a JSON-serializable representation of this inference."""
         return {
             "operation": self.operation,
