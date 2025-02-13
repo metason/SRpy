@@ -80,7 +80,7 @@ class SpatialPredicateCategories:
     def __init__(self):
         self.topology: bool = True
         self.connectivity: bool = True
-        self.contacts: bool = True
+        self.contacts: bool = False
         self.comparability: bool = False
         self.similarity: bool = False
         self.sectoriality: bool = False

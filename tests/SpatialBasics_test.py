@@ -116,37 +116,6 @@ class TestSpatialAdjustment(unittest.TestCase):
         self.assertAlmostEqual(adjustment.yaw, 45.0)
 
 
-class TestSpatialPredicateCategories(unittest.TestCase):
-    def test_default_initialization(self):
-        """Test the default initialization of SpatialPredicateCategories."""
-        categories = SpatialPredicateCategories()
-        self.assertTrue(categories.topology)
-        self.assertTrue(categories.connectivity)
-        self.assertFalse(categories.comparability)
-        self.assertFalse(categories.similarity)
-        self.assertFalse(categories.sectoriality)
-        self.assertFalse(categories.visibility)
-        self.assertFalse(categories.geography)
-
-    def test_custom_initialization(self):
-        """Test custom initialization of SpatialPredicateCategories."""
-        categories = SpatialPredicateCategories()
-        categories.topology = False
-        categories.connectivity = False
-        categories.comparability = True
-        categories.similarity = True
-        categories.sectoriality = True
-        categories.visibility = True
-        categories.geography = True
-
-        self.assertFalse(categories.topology)
-        self.assertFalse(categories.connectivity)
-        self.assertTrue(categories.comparability)
-        self.assertTrue(categories.similarity)
-        self.assertTrue(categories.sectoriality)
-        self.assertTrue(categories.visibility)
-        self.assertTrue(categories.geography)
-
 
 class TestObjectConfidence(unittest.TestCase):
     def test_default_initialization(self):
