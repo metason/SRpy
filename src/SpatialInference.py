@@ -585,10 +585,13 @@ class SpatialInference:
             condition = "label == 'Wall' and confidence > 0.8"
         We'll create a function predicate(dict_or_obj) -> bool
         - We do a basic token-based approach: tokens become `obj.get('token', 0)`
+        - If we see the literal 'true'/'false' (lowercase), we map them to Python True/False
+        so that 'immobile == true' works as expected.
         """
         try:
-            if not condition:
-                return lambda _: True  # No condition => always True
+            if not condition.strip():
+                # No condition => always True
+                return lambda _: True
 
             def is_number(s: str) -> bool:
                 try:
@@ -597,51 +600,66 @@ class SpatialInference:
                 except ValueError:
                     return False
 
+            # 1) Split by quoted strings so we don't replace inside quotes
             parts = re.split(r"('.*?')", condition)
             processed_parts = []
+
+            # Pattern for tokens: sequences of letters/numbers/underscores/dots
+            # (You could refine to match your domain.)
             token_pattern = r'\b(?:\w+\.)*\w+\b'
 
             def token_repl(m: re.Match) -> str:
                 token = m.group(0)
                 lower = token.lower()
-                
+
+                # 1) Boolean operators
                 if lower in {"and", "or", "not"}:
                     return lower
-                # Python built-ins or keywords
+
+                # 2) Python built-ins or keywords
+                #    If the token is "true"/"false", we explicitly convert to "True"/"False"
+                if lower in {"true", "false"}:
+                    return lower.capitalize()  # "true" -> "True", "false" -> "False"
                 if token in keyword.kwlist or token in {"True", "False", "None"}:
                     return token
+
+                # 3) Numeric literal?
                 if is_number(token):
                     return token
 
-                # Possibly a dot chain, e.g. "confidence.value"
+                # 4) Possibly a dot chain, e.g. "confidence.value"
+                #    => "obj.get('confidence', {}).get('value', 0)"
                 if '.' in token:
                     chain_parts = token.split('.')
-                    expr = "obj.get('" + chain_parts[0] + "', {})"
+                    expr = f"obj.get('{chain_parts[0]}', {{}})"
                     for sub in chain_parts[1:]:
                         expr += f".get('{sub}', 0)"
                     return expr
                 else:
+                    # Plain token => "obj.get('token', 0)"
                     return f"obj.get('{token}', 0)"
 
+            # 2) Reconstruct the string with replaced tokens (outside quotes)
             for i, part in enumerate(parts):
-                # odd indices => quoted string
                 if i % 2 == 1:
+                    # Odd indices => quoted string, leave it unchanged
                     processed_parts.append(part)
                 else:
-                    # Replace tokens outside quotes
-                    processed_parts.append(re.sub(token_pattern, token_repl, part))
+                    # Even indices => outside quotes, do replacements
+                    replaced = re.sub(token_pattern, token_repl, part)
+                    processed_parts.append(replaced)
 
             final_expr = "".join(processed_parts)
             compiled_expr = compile(final_expr, "<string>", "eval")
 
             def predicate(obj):
-                # If the object is a SpatialObject, convert to dict or
-                # if we already have a dict, use directly.
+                # If the object is a SpatialObject, convert to dict; otherwise assume it's already a dict.
                 if hasattr(obj, "asDict") and callable(obj.asDict):
                     obj_data = obj.asDict()
                 else:
                     obj_data = obj
                 return bool(eval(compiled_expr, {"__builtins__": {}}, {"obj": obj_data}))
+
             return predicate
 
         except Exception as e:
