@@ -418,8 +418,6 @@ class SpatialObject:
     # Object Serialization
     # Full-fledged representation for fact base
     def asDict(self) -> Dict[str, Any]:
-        print("asDict called")
-        print("existence:", self.existence)
         output = {
             "id": self.id,
             "existence": self.existence.value,
@@ -481,6 +479,7 @@ class SpatialObject:
             "height": self.height,
             "depth": self.depth,
             "angle": self.angle,
+            "volume": self.volume,
             "immobile": self.immobile,
             "velocity": [self.velocity.x, self.velocity.y, self.velocity.z],
             "confidence": self.confidence.value,
@@ -1579,7 +1578,7 @@ class SpatialObject:
                         angle=rad
                     )
                     result.append(relation)
-        print("*************************************************************************************************************")
+        
         return result
         
         
