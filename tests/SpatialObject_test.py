@@ -908,7 +908,7 @@ class TestSpatialObjectUtilityMethods(unittest.TestCase):
         # Calculate expected azimuth
         north_angle = math.degrees(math.atan2(north_vector.y, north_vector.x))  # Compute north angle
         value = self.obj.yaw + north_angle - 90.0  # Match azimuth computation
-        expected_azimuth = -((value) % 360.0)  # Ensure correct negation and modulo behavior
+        expected_azimuth = -math.fmod(self.obj.yaw + north_angle - 90.0, 360.0)
 
         # Assert expected value
         self.assertAlmostEqual(self.obj.azimuth, expected_azimuth, places=5)

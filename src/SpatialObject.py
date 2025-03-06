@@ -140,7 +140,7 @@ class SpatialObject:
     def azimuth(self) -> float:
         if self.context is None or self.context.north is None:
             return 0.0
-        north_angle = math.degrees(math.atan2(self.context.north.x, self.context.north.y))
+        north_angle = math.degrees(math.atan2(self.context.north.y, self.context.north.x))
         # Use math.fmod to replicate Swift's truncatingRemainder(dividingBy:)
         return -math.fmod(self.yaw + north_angle - 90.0, 360.0)
 
