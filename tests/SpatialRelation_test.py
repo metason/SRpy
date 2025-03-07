@@ -79,7 +79,7 @@ class TestSpatialRelations(unittest.TestCase):
         )
         obj = SpatialObject(
             id="obj",
-            position=Vector3(x=1.8, y=1.8, z=1.8),
+            position=Vector3(x=0.0, y=0.0, z=0.0),
             width=1.0,
             height=1.0,
             depth=1.0
@@ -96,7 +96,8 @@ class TestSpatialRelations(unittest.TestCase):
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.near, predicates)
         self.assertIn(SpatialPredicate.disjoint, predicates)
-        self.assertIn(SpatialPredicate.below, predicates)
+        self.assertIn(SpatialPredicate.aligned, predicates)
+        self.assertIn(SpatialPredicate.left, predicates)
 
     def test_notnear(self):
         """
