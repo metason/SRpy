@@ -1924,7 +1924,7 @@ class SpatialObject:
         objVal = self.volume
         subjVal = subject.volume
         diff = subjVal - objVal
-        if (self.width * self.depth * self.height) - subjVal > (self.adjustment.maxGap ** 3):
+        if diff > (self.adjustment.maxGap ** 3):
             relation = SpatialRelation(
                 subject=subject,
                 predicate=SpatialPredicate.bigger,
@@ -1951,7 +1951,6 @@ class SpatialObject:
             )
             result.append(relation)
 
-        # Fitting
         if self.height > subject.height and self.footprint > subject.footprint:
             relation = SpatialRelation(
                 subject=subject,
