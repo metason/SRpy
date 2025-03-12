@@ -1098,13 +1098,7 @@ class TestSpatialRelations(unittest.TestCase):
         )
         relations = obj.relate(subject=subject, comparison=True)
         self.print_relations(relations)
-        print("maxGap object-subject: ", obj.adjustment.maxGap)
-        print("maxGap object-subject: ", subject.adjustment.maxGap)
-        print("maxgap subject: ", subject.adjustment.maxGap)
-        print("maxgap object: ", obj.adjustment.maxGap)
-        print("volume obj: ", obj.volume)
-        print("volume subj: ", subject.volume)
-        print("diff: ", subject.volume - obj.volume)
+
         spatial_objects = [obj, subject]
         export_filename = f"thinner.usdz"
         self.exporter = SceneExporter(self.temp_dir)
