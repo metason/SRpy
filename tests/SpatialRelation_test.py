@@ -128,6 +128,42 @@ class TestSpatialRelations(unittest.TestCase):
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.far, predicates)
         self.assertNotIn(SpatialPredicate.near, predicates)
+    
+    def test_not_near_extended(self):
+        """
+        Test that a subject is far from an object. Aligned with swift version including side effects..
+        """
+        subject = SpatialObject(
+            id="subj",
+            position=Vector3(x=4.2, y=0.0, z=0),
+            width=1.0,
+            height=1.0,
+            depth=1.0
+        )
+        obj = SpatialObject(
+            id="obj",
+            position=Vector3(x=0, y=0.0, z=0),
+            width=1.0,
+            height=1.0,
+            depth=1.0
+        )
+        relations = obj.relate(subject=subject, topology=True)
+        self.print_relations(relations)
+
+        spatial_objects = [obj, subject]
+        export_filename = f"not_near.usdz"
+        self.exporter = SceneExporter(self.temp_dir)
+        self.exporter.exportUSDZ(spatial_objects, export_filename)
+
+        predicates = [rel.predicate for rel in relations]
+        self.assertIn(SpatialPredicate.far, predicates)
+        self.assertNotIn(SpatialPredicate.near, predicates)
+        self.assertIn(SpatialPredicate.disjoint, predicates)
+        self.assertIn(SpatialPredicate.aligned, predicates)
+        self.assertIn(SpatialPredicate.left, predicates)
+        self.assertIn(SpatialPredicate.frontaligned, predicates)
+        self.assertIn(SpatialPredicate.backaligned, predicates)
+        
 
     def test_inside(self):
         """
@@ -158,6 +194,40 @@ class TestSpatialRelations(unittest.TestCase):
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.inside, predicates)
         self.assertNotIn(SpatialPredicate.disjoint, predicates)
+        
+    def test_inside_extended(self):
+        """
+        Test that a subject is inside an object.
+        """
+        subject = SpatialObject(
+            id="subj",
+            position=Vector3(x=0.0, y=0.2, z=0),
+            width=0.5,
+            height=0.5,
+            depth=0.5
+        )
+        obj = SpatialObject(
+            id="obj",
+            position=Vector3(x=0, y=0.0, z=0),
+            width=1.0,
+            height=1.0,
+            depth=1.0
+        )
+        relations = obj.relate(subject=subject, topology=True)
+        self.print_relations(relations)
+
+        spatial_objects = [obj, subject]
+        export_filename = f"inside.usdz"
+        self.exporter = SceneExporter(self.temp_dir)
+        self.exporter.exportUSDZ(spatial_objects, export_filename)
+
+        predicates = [rel.predicate for rel in relations]
+        self.assertIn(SpatialPredicate.inside, predicates)
+        self.assertNotIn(SpatialPredicate.disjoint, predicates)
+        self.assertIn(SpatialPredicate.near, predicates)
+        self.assertIn(SpatialPredicate.aligned, predicates)
+        self.assertNotIn(SpatialPredicate.frontaligned, predicates)
+        self.assertNotIn(SpatialPredicate.leftaligned, predicates)
 
     def test_containing(self):
         """
@@ -188,6 +258,38 @@ class TestSpatialRelations(unittest.TestCase):
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.containing, predicates)
         self.assertNotIn(SpatialPredicate.disjoint, predicates)
+        
+    def test_containing_extended(self):
+        """
+        Test that a subject is containing an object.
+        """
+        subject = SpatialObject(
+            id="subj",
+            position=Vector3(x=0, y=0.0, z=0),
+            width=1.0,
+            height=1.0,
+            depth=1.0
+        )
+        obj = SpatialObject(
+            id="obj",
+            position=Vector3(x=0.0, y=0.0, z=0),
+            width=0.1,
+            height=0.1,
+            depth=0.1
+        )
+        relations = obj.relate(subject=subject, topology=True)
+        self.print_relations(relations)
+
+        spatial_objects = [obj, subject]
+        export_filename = f"containing.usdz"
+        self.exporter = SceneExporter(self.temp_dir)
+        self.exporter.exportUSDZ(spatial_objects, export_filename)
+
+        predicates = [rel.predicate for rel in relations]
+        self.assertIn(SpatialPredicate.containing, predicates)
+        self.assertNotIn(SpatialPredicate.disjoint, predicates)
+        self.assertIn(SpatialPredicate.near, predicates)
+        self.assertIn(SpatialPredicate.aligned, predicates)
 
     def test_door_inside_wall(self):
         """
@@ -215,6 +317,38 @@ class TestSpatialRelations(unittest.TestCase):
 
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.inside, predicates)
+        
+    def test_door_inside_wall_extended(self):
+        """
+        Test that a door is inside a wall.
+        """
+        wall1 = SpatialObject.createBuildingElement_from_vectors(
+            id="wall1",
+            from_pos=Vector3(x=-2, y=0, z=0),
+            to_pos=Vector3(x=2, y=0, z=0),
+            height=2.3
+        )
+        door = SpatialObject.createBuildingElement_from_vectors(
+            id="door",
+            from_pos=Vector3(x=0.4, y=0, z=0),
+            to_pos=Vector3(x=1.3, y=0, z=0),
+            height=2.05
+        )
+        relations = wall1.relate(subject=door, topology=True)
+        self.print_relations(relations)
+
+        spatial_objects = [wall1, door]
+        export_filename = f"door_inside_wall.usdz"
+        self.exporter = SceneExporter(self.temp_dir)
+        self.exporter.exportUSDZ(spatial_objects, export_filename)
+
+        predicates = [rel.predicate for rel in relations]
+        self.assertIn(SpatialPredicate.inside, predicates)
+        self.assertIn(SpatialPredicate.backaligned, predicates)
+        self.assertIn(SpatialPredicate.frontaligned, predicates)
+        self.assertIn(SpatialPredicate.aligned, predicates)
+        self.assertIn(SpatialPredicate.inside, predicates)
+        self.assertIn(SpatialPredicate.in_, predicates)
 
     def test_window_inside_wall(self):
         """
@@ -242,6 +376,38 @@ class TestSpatialRelations(unittest.TestCase):
         
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.inside, predicates)
+        
+    def test_window_inside_wall_extended(self):
+        """
+        Test that a window is inside a wall.
+        """
+        wall2 = SpatialObject.createBuildingElement_from_vectors(
+            id="wall2",
+            from_pos=Vector3(x=2, y=0, z=0),
+            to_pos=Vector3(x=2, y=0, z=2.5),
+            height=2.3
+        )
+        window = SpatialObject.createBuildingElement_from_vectors(
+            id="window",
+            from_pos=Vector3(x=2, y=0.7, z=1),
+            to_pos=Vector3(x=2, y=0.7, z=2.2),
+            height=1.35
+        )
+        relations = wall2.relate(subject=window, topology=True)
+        self.print_relations(relations)
+
+        spatial_objects = [wall2, window]
+        export_filename = f"window_inside_wall.usdz"
+        self.exporter = SceneExporter(self.temp_dir)
+        self.exporter.exportUSDZ(spatial_objects, export_filename)
+        
+        predicates = [rel.predicate for rel in relations]
+        self.assertIn(SpatialPredicate.inside, predicates)
+        self.assertIn(SpatialPredicate.backaligned, predicates)
+        self.assertIn(SpatialPredicate.frontaligned, predicates)
+        self.assertIn(SpatialPredicate.aligned, predicates)
+        self.assertIn(SpatialPredicate.inside, predicates)
+        self.assertIn(SpatialPredicate.in_, predicates)
 
     def test_below(self):
         """
@@ -271,6 +437,41 @@ class TestSpatialRelations(unittest.TestCase):
 
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.below, predicates)
+        
+    def test_below_extended(self):
+        """
+        Test that a subject is below an object.
+        """
+        subject = SpatialObject(
+            id="subj",
+            position=Vector3(x=0, y=-1.10, z=0.00),
+            width=1.0,
+            height=1.0,
+            depth=1.0
+        )
+        obj = SpatialObject(
+            id="obj",
+            position=Vector3(x=0, y=0.0, z=0),
+            width=1.0,
+            height=1.0,
+            depth=1.0
+        )
+        relations = obj.relate(subject=subject, topology=True)
+        self.print_relations(relations)
+
+        spatial_objects = [subject, obj]
+        export_filename = f"below.usdz"
+        self.exporter = SceneExporter(self.temp_dir)
+        self.exporter.exportUSDZ(spatial_objects, export_filename)
+
+        predicates = [rel.predicate for rel in relations]
+        
+        self.assertIn(SpatialPredicate.below, predicates)
+        self.assertIn(SpatialPredicate.near, predicates)
+        self.assertIn(SpatialPredicate.lowerside, predicates)
+        self.assertIn(SpatialPredicate.disjoint, predicates)
+        self.assertIn(SpatialPredicate.aligned, predicates)
+        self.assertIn(SpatialPredicate.frontaligned, predicates)
 
     def test_above(self):
         """
@@ -300,7 +501,39 @@ class TestSpatialRelations(unittest.TestCase):
 
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.above, predicates)
+        
+    def test_above_extended(self):
+        """
+        Test that a subject is above an object.
+        """
+        subject = SpatialObject(
+            id="subj",
+            position=Vector3(x=0, y=1.61, z=0.1),
+            width=1.0,
+            height=1.0,
+            depth=1.0
+        )
+        obj = SpatialObject(
+            id="obj",
+            position=Vector3(x=0, y=0.0, z=0),
+            width=1.1,
+            height=1.1,
+            depth=1.1
+        )
+        relations = obj.relate(subject=subject, topology=True)
+        self.print_relations(relations)
 
+        spatial_objects = [subject, obj]
+        export_filename = f"above.usdz"
+        self.exporter = SceneExporter(self.temp_dir)
+        self.exporter.exportUSDZ(spatial_objects, export_filename)
+
+        predicates = [rel.predicate for rel in relations]
+        self.assertIn(SpatialPredicate.above, predicates)
+        self.assertIn(SpatialPredicate.disjoint, predicates)
+        self.assertIn(SpatialPredicate.near, predicates)
+        self.assertIn(SpatialPredicate.aligned, predicates)
+        
     def test_ontop(self):
         """
         Test that a subject is on top of an object.
@@ -329,6 +562,44 @@ class TestSpatialRelations(unittest.TestCase):
 
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.ontop, predicates)
+        
+        
+    def test_ontop_extended(self):
+        """
+        Test that a subject is on top of an object.
+        """
+        subject = SpatialObject(
+            id="subj",
+            position=Vector3(x=0, y=1.01, z=0),
+            width=0.8,
+            height=0.6,
+            depth=0.25
+        )
+        obj = SpatialObject(
+            id="obj",
+            position=Vector3(x=0, y=0, z=0),
+            width=1.0,
+            height=1.0,
+            depth=1.0
+        )
+        relations = obj.relate(subject=subject, topology=True)
+        self.print_relations(relations)
+
+        spatial_objects = [subject, obj]
+        export_filename = f"ontop.usdz"
+        self.exporter = SceneExporter(self.temp_dir)
+        self.exporter.exportUSDZ(spatial_objects, export_filename)
+
+        predicates = [rel.predicate for rel in relations]
+        self.assertIn(SpatialPredicate.ontop, predicates)
+        self.assertIn(SpatialPredicate.above, predicates)
+        self.assertIn(SpatialPredicate.near, predicates)
+        self.assertIn(SpatialPredicate.on, predicates)
+        self.assertIn(SpatialPredicate.upperside, predicates)
+        self.assertIn(SpatialPredicate.meeting, predicates)
+        self.assertIn(SpatialPredicate.disjoint, predicates)
+        self.assertIn(SpatialPredicate.aligned, predicates)
+        
 
     def test_overlapping(self):
         """
@@ -360,6 +631,40 @@ class TestSpatialRelations(unittest.TestCase):
 
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.overlapping, predicates)
+        
+    def test_overlapping_extended(self):
+        """
+        Test that a subject is overlapping an object.
+        """
+        subject = SpatialObject(
+            id="subj",
+            position=Vector3(x=0.4, y=0.4, z=0.2),
+            width=1.1,
+            height=1.1,
+            depth=1.1
+        )
+        obj = SpatialObject(
+            id="obj",
+            position=Vector3(x=0, y=0, z=0),
+            width=1.0,
+            height=1.0,
+            depth=1.0
+        )
+        spatial_reasoner = SpatialReasoner()
+        spatial_reasoner.load([obj, subject])
+        relations = obj.relate(subject=subject, topology=True)
+        self.print_relations(relations)
+
+        spatial_objects = [subject, obj]
+        export_filename = f"overlapping.usdz"
+        self.exporter = SceneExporter(self.temp_dir)
+        self.exporter.exportUSDZ(spatial_objects, export_filename)
+
+        predicates = [rel.predicate for rel in relations]
+        self.assertIn(SpatialPredicate.overlapping, predicates)
+        self.assertIn(SpatialPredicate.meeting, predicates)
+        self.assertIn(SpatialPredicate.near, predicates)
+        self.assertIn(SpatialPredicate.aligned, predicates)
 
     def test_crossing_hor(self):
         """
@@ -390,6 +695,9 @@ class TestSpatialRelations(unittest.TestCase):
 
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.crossing, predicates)
+        self.assertIn(SpatialPredicate.near, predicates)
+        self.assertIn(SpatialPredicate.meeting, predicates)
+        
 
     def test_crossing_vert(self):
         """
@@ -419,12 +727,13 @@ class TestSpatialRelations(unittest.TestCase):
 
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.crossing, predicates)
+        self.assertIn(SpatialPredicate.near, predicates)
+        self.assertIn(SpatialPredicate.meeting, predicates)
 
     def test_touching(self):
         """
         Test that a subject is touching and beside an object.
         """
-        # Create the subject with the same properties as in Swift.
         subject = SpatialObject(
             id="subj",
             position=Vector3(x=0.83, y=0, z=-0.2),
@@ -432,9 +741,8 @@ class TestSpatialRelations(unittest.TestCase):
             height=0.8,
             depth=0.5
         )
-        subject.setYaw(45.0)  # Set yaw to 45 degrees, as in the Swift test.
-
-        # Create the object.
+        subject.setYaw(45.0) 
+    
         obj = SpatialObject(
             id="obj",
             position=Vector3(x=0, y=0, z=0),
@@ -443,20 +751,22 @@ class TestSpatialRelations(unittest.TestCase):
             depth=1.0
         )
 
-        # Compute the spatial relations.
         relations = obj.relate(subject=subject, topology=True)
         self.print_relations(relations)
 
-        # Optionally export the scene for visualization.
         spatial_objects = [subject, obj]
         export_filename = "touching.usdz"
         self.exporter = SceneExporter(self.temp_dir)
         self.exporter.exportUSDZ(spatial_objects, export_filename)
 
-        # Verify that both 'touching' and 'beside' predicates are present.
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.touching, predicates)
         self.assertIn(SpatialPredicate.beside, predicates)
+        self.assertIn(SpatialPredicate.leftside, predicates)
+        self.assertIn(SpatialPredicate.left, predicates)
+        self.assertIn(SpatialPredicate.near, predicates)
+        self.assertIn(SpatialPredicate.by, predicates)
+        self.assertIn(SpatialPredicate.disjoint, predicates)
 
     def test_meeting(self):
         """
@@ -494,6 +804,16 @@ class TestSpatialRelations(unittest.TestCase):
         # Verify that the 'meeting' predicate is among the computed relations.
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.meeting, predicates)
+        
+        self.assertIn(SpatialPredicate.near, predicates)
+        self.assertIn(SpatialPredicate.leftside, predicates)
+        self.assertIn(SpatialPredicate.left, predicates)
+        
+        self.assertIn(SpatialPredicate.beside, predicates)
+        self.assertIn(SpatialPredicate.at, predicates)
+        self.assertIn(SpatialPredicate.orthogonal, predicates)
+        self.assertIn(SpatialPredicate.disjoint, predicates)
+
 
     def test_congruent(self):
         """
@@ -525,6 +845,17 @@ class TestSpatialRelations(unittest.TestCase):
 
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.congruent, predicates)
+        
+        self.assertIn(SpatialPredicate.samecenter, predicates)
+        self.assertIn(SpatialPredicate.sameposition, predicates)
+        self.assertIn(SpatialPredicate.samewidth, predicates)
+        self.assertIn(SpatialPredicate.sameheight, predicates)
+        self.assertIn(SpatialPredicate.samedepth, predicates)
+        self.assertIn(SpatialPredicate.samecuboid, predicates)
+        self.assertIn(SpatialPredicate.samelength, predicates)
+        self.assertIn(SpatialPredicate.samefront, predicates)
+        self.assertIn(SpatialPredicate.samesurface, predicates)
+        self.assertIn(SpatialPredicate.samevolume, predicates)
 
     def test_seen_right(self):
         """
@@ -594,6 +925,7 @@ class TestSpatialRelations(unittest.TestCase):
         
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.seenleft, predicates)
+        self.assertIn(SpatialPredicate.infront, predicates)
 
     def test_infront(self):
         """
@@ -697,6 +1029,11 @@ class TestSpatialRelations(unittest.TestCase):
 
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.elevenoclock, predicates)
+        self.assertIn(SpatialPredicate.far, predicates)
+        self.assertIn(SpatialPredicate.left, predicates)
+        self.assertIn(SpatialPredicate.ahead, predicates)
+        self.assertIn(SpatialPredicate.disjoint, predicates)
+        self.assertIn(SpatialPredicate.aligned, predicates)
 
     def test_at2clock(self):
         """
@@ -733,7 +1070,14 @@ class TestSpatialRelations(unittest.TestCase):
 
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.twooclock, predicates)
-
+        
+        self.assertIn(SpatialPredicate.near, predicates)
+        self.assertIn(SpatialPredicate.right, predicates)
+        self.assertIn(SpatialPredicate.ahead, predicates)
+        self.assertIn(SpatialPredicate.disjoint, predicates)
+        self.assertIn(SpatialPredicate.aligned, predicates)
+        self.assertIn(SpatialPredicate.tangible, predicates)
+        
     def test_thinner(self):
         """
         Test that a subject is thinner than an object.
@@ -754,7 +1098,13 @@ class TestSpatialRelations(unittest.TestCase):
         )
         relations = obj.relate(subject=subject, comparison=True)
         self.print_relations(relations)
-
+        print("maxGap object-subject: ", obj.adjustment.maxGap)
+        print("maxGap object-subject: ", subject.adjustment.maxGap)
+        print("maxgap subject: ", subject.adjustment.maxGap)
+        print("maxgap object: ", obj.adjustment.maxGap)
+        print("volume obj: ", obj.volume)
+        print("volume subj: ", subject.volume)
+        print("diff: ", subject.volume - obj.volume)
         spatial_objects = [obj, subject]
         export_filename = f"thinner.usdz"
         self.exporter = SceneExporter(self.temp_dir)
@@ -762,6 +1112,10 @@ class TestSpatialRelations(unittest.TestCase):
 
         predicates = [rel.predicate for rel in relations]
         self.assertIn(SpatialPredicate.thinner, predicates)
+        
+        self.assertIn(SpatialPredicate.shorter, predicates)
+        self.assertIn(SpatialPredicate.smaller, predicates)
+        self.assertIn(SpatialPredicate.fitting, predicates)
 
     def test_corners(self):
         """
@@ -791,14 +1145,6 @@ class TestSpatialRelations(unittest.TestCase):
         self.exporter = SceneExporter(self.temp_dir)
         self.exporter.exportUSDZ(spatial_objects, export_filename)
         
-
-    def test_thin_ratio_edge_case(self):
-        """
-        Additional test to ensure thin ratio functionality if applicable.
-        """
-
-        pass
-
 
 if __name__ == '__main__':
     unittest.main()
