@@ -118,7 +118,7 @@ class SpatialInference:
 
         base_objects = self.fact.base.get("objects", [])
         for i in self.input:
-            obj_data = base_objects[i]  # Typically a dict describing object
+            obj_data = base_objects[i] 
             try:
                 result = predicate(obj_data)
                 if result:
@@ -132,33 +132,53 @@ class SpatialInference:
     def pick(self, relations: str):
         """
         Keep objects whose relationship with other objects satisfies some boolean expression.
-        E.g. pick("adjacent or above") might check adjacency or vertical relation.
-        This simplistic example tries to interpret each relation as a keyword in `fact.does(...)`.
+        E.g. pick("ahead AND smaller") might check adjacency or a vertical relation.
+        This implementation interprets each relational token (e.g. 'ahead', 'smaller')
+        as a predicate to be replaced by True/False. Logical operators like 'and', 'or', 'not'
+        remain intact.
         """
+        relations = (relations
+        .replace("AND", "and")
+        .replace("OR",  "or")
+        .replace("NOT", "not")
+        )
+        # 1) Extract all lowercase words from the string:
         predicates = SpatialInference.extract_keywords(relations)
 
+        # 2) Filter out logical operators so they remain in the condition string:
+        logic_ops = {"and", "or", "not"}
+        predicates = [p for p in predicates if p not in logic_ops]
+
+        # We'll build self.output by checking each pair (i, j):
         for i in self.input:
             # i is the "reference" object
             for j, subject in enumerate(self.fact.objects):
                 if i == j:
                     continue
 
-                # Replace each predicate in `relations` with True/False
+                # Make a working copy of relations (the expression string)
                 cond = relations
+
+                # 3) For each "real" predicate token (e.g. 'ahead', 'smaller'),
+                #    replace with True/False depending on whether it is satisfied.
                 for predicate in predicates:
+                    # Check if subject has 'predicate' with object i
                     if self.fact.does(subject=subject, have=predicate, with_obj_idx=i):
                         cond = cond.replace(predicate, "True")
                     else:
                         cond = cond.replace(predicate, "False")
 
-                # Evaluate the final condition string
-                # e.g. "True or False" => True
+                # 4) Evaluate final expression, e.g. "True AND False"
                 try:
                     result = eval(cond)
                     if result:
                         self.add(j)
                 except Exception as e:
-                    self.error = f"Pick evaluation error for relation '{relations}' between {i} and {j}: {str(e)}"
+                    self.error = (
+                        f"Pick evaluation error for relation '{relations}' "
+                        f"between {i} and {j}: {str(e)}"
+                    )
+                    print(e)
                     return
 
         self.succeeded = bool(self.output)
