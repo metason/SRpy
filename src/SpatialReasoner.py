@@ -211,6 +211,8 @@ class SpatialReasoner:
             elif op.startswith("deduce(") and op.endswith(")"):
                 content = op[7:-1].strip()
                 self.deduce_categories(content)
+            elif op.startswith("halt("):
+                break
             else:
                 input_chain = self.chain[-1].output if self.chain else indices
                 inference = SpatialInference(input_indices=input_chain, operation=op, fact=self)
@@ -450,7 +452,8 @@ class SpatialReasoner:
             self.log_base()
         if "3D" in predicates_list:
             predicates_list.remove("3D")
-            # Visualization code for 3D logging is omitted as per instruction
+            #TODO: Implement 3D visualization
+            #self.log_3D()
 
         # Build Markdown content
         md = f"# {self.name if self.name else 'Spatial Reasoning Log'}\n"
@@ -545,11 +548,6 @@ class SpatialReasoner:
                 json.dump(self.base, f, indent=4)
         except Exception as e:
             print(f"Error writing log base: {e}")
-
-    # === Visualization Methods ===
-    # All visualization-related methods (e.g., log3D) are omitted as per instruction.
-
-    # === Additional Methods ===
 
     @staticmethod
     def print_relations(relations: List[SpatialRelation]):
