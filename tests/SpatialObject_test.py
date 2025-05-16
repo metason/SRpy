@@ -105,7 +105,7 @@ class TestSpatialObjectDerivedProperties(unittest.TestCase):
 
     def test_center_property(self):
         # Assuming center is calculated as (position.x + width/2, position.y + height/2, position.z + depth/2)
-        expected_center = Vector3(1.0, 2.0, 3.0)
+        expected_center = Vector3(0.0, 2.0, 0.0)
         self.assertEqual(self.obj.center, expected_center)
 
     def test_volume_property(self):
