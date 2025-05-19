@@ -4,6 +4,7 @@ import re
 from .SpatialObject import SpatialObject
 from typing import Any, Dict, List, Optional
 from .SpatialObject import SpatialObject
+from .SpatialTaxonomy import SpatialTaxonomy
 from src.SpatialBasics import (
     NearbySchema,
     SectorSchema,
@@ -59,6 +60,10 @@ class SpatialInference:
             if op.startswith("filter(") and op.endswith(")"):
                 condition = op[7:-1].strip()
                 self.filter(condition)
+                
+            elif op.startswith("isa(") and op.endswith(")"):
+                terms = op[4:-1].strip()
+                self.fact.isa(terms, self.input)
 
             elif op.startswith("pick(") and op.endswith(")"):
                 relations = op[5:-1].strip()
@@ -128,6 +133,39 @@ class SpatialInference:
                 return
 
         self.succeeded = True
+        
+    def isa(self, type:str):
+        """
+        Keep only objects of a certain type or class.
+        Example: isa("Wall")
+        """
+        string = type.lower().replace('||', ' or ').replace('or','|')
+        type_list = string.split('|')
+        
+        base_objects = self.fact.base.get("objects", [])
+        for i in self.input:
+            obj_data = base_objects[i]
+            doAdd = False
+            for type in type_list:
+                target_type:str = type.lower().strip(" '")
+                base_concept = None 
+                base_type:str = obj_data["type"].lower().strip(" '")
+                if base_type is not None and len(base_type) > 0:
+                    base_concept = SpatialTaxonomy.getConcept(base_type)
+                    
+                if base_concept is None:
+                    base_type = obj_data["label"]
+                    base_concept = SpatialTaxonomy.getConceptByLabel(base_type)
+                
+                if base_concept is not None:
+                    result = base_concept.isa(target_type)
+                    doAdd = result is not None
+                    
+            if doAdd:
+                self.add(i)
+                break
+        self.succeeded = len(self.output) > 0
+        
 
     def pick(self, relations: str):
         """
