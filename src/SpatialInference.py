@@ -1,10 +1,16 @@
+import math
 import re
 import keyword
 import re
+import traceback
+from src.BBoxSector import BBoxSector, BBoxSectorFlags
+from src.Vector2 import Vector2
+from src.Vector3 import Vector3
 from .SpatialObject import SpatialObject
 from typing import Any, Dict, List, Optional
 from .SpatialObject import SpatialObject
 from .SpatialTaxonomy import SpatialTaxonomy
+from .SpatialObject import SpatialObject
 from src.SpatialBasics import (
     NearbySchema,
     SectorSchema,
@@ -100,7 +106,7 @@ class SpatialInference:
                 # Unrecognized operation
                 self.error = f"Unknown inference operation: '{op}'"
         except Exception as e:
-            self.error = f"Exception during operation '{self.operation}': {str(e)}"
+            self.error = f"Exception during operation '{self.operation}': {str(e)} details: {traceback.format_exc()}"
 
     def add(self, index: int):
         """Utility to add an index to self.output if not already present."""
@@ -214,9 +220,8 @@ class SpatialInference:
                 except Exception as e:
                     self.error = (
                         f"Pick evaluation error for relation '{relations}' "
-                        f"between {i} and {j}: {str(e)}"
+                        f"between {i} and {j}: {str(e)}, {traceback.format_exc()}"
                     )
-                    print(e)
                     return
 
         self.succeeded = bool(self.output)
@@ -225,7 +230,7 @@ class SpatialInference:
         """
         A more advanced pick + attribute check.
         Typically: "relations ? conditions"
-          e.g. select("adjacent or above ? label=='Target'")
+        e.g. select("adjacent or above ? label=='Target'")
         If the relation expression is True, we further check the attribute `conditions`.
         """
         parts = [part.strip() for part in terms.split("?")]
@@ -269,50 +274,107 @@ class SpatialInference:
                     return
 
         self.succeeded = bool(self.output)
+        
+    def sort_by_relation(self, attribute: str):
+        """
+        Sort the input indices by a relation‐based value.
+        Syntax: "relationName [<] [steps]" e.g. "distanceTo < 2"
+        where "<" means ascending (default is descending), and
+        a trailing number is the backtrace step count.
+        """
+        ascending = False
+        steps = 1
+
+        parts = attribute.split()
+        if not parts:
+            return
+
+        # first token is the relation name
+        attr = parts[0].strip()
+        # subsequent tokens set ascending or override steps
+        for token in parts[1:]:
+            if token == "<":
+                ascending = True
+            elif token == ">":
+                ascending = False
+            else:
+                try:
+                    steps = int(token)
+                except ValueError:
+                    pass
+
+        # gather our SpatialObject instances
+        input_objs = [self.fact.objects[i] for i in self.input]
+
+        # ask the fact for the pre‐indices after backtrace
+        pre_indices = self.fact.backtrace(abs(steps))
+
+        # sort by each object’s relationValue(attr, pre=pre_indices)
+        sorted_objs = sorted(
+            input_objs,
+            key=lambda o: o.relationValue(attr, pre=pre_indices),
+            reverse=not ascending
+        )
+
+        # rebuild self.output in that order
+        self.output = []
+        for obj in sorted_objs:
+            idx = next((i for i, o in enumerate(self.fact.objects) if o is obj), None)
+            if idx is not None:
+                self.add(idx)
+
+        self.succeeded = bool(self.output)
 
     def sort(self, attribute: str):
         """
-        Sort the input objects by a numeric attribute or relation-based value.
-        Example: sort("width"), sort("volume <"), sort("distanceTo=someObj <")
-        If we see a trailing '<', that implies ascending order. Otherwise descending.
+        Sort the input indices by a primitive attribute (width, height, …)
+        or, if the string contains a '.', by a relation value.
+        Uses '<' to signal ascending order (default is descending).
         """
-        ascending = attribute.endswith("<")
-        # Remove any trailing symbol like "<" or ">"
-        cleaned_attr = attribute.replace("<", "").replace(">", "").strip()
-
-        input_objs = [self.fact.objects[i] for i in self.input]
-
-        # Decide if it's a direct attribute sort or a 'relationValue' sort.
-        # For simplicity, check if there's a dot or known relation pattern:
-        # Or we can parse "distanceTo=otherObj" if needed.
-        # Here we do a simple fallback: if `cleaned_attr` is in (width, height, volume, etc.), we do a direct attribute read.
-        # Otherwise we might do a more advanced approach (like `obj.get_attribute_value`).
-        try:
-            # Example custom sorting:
-            if cleaned_attr == "width":
-                sorted_objs = sorted(input_objs, key=lambda o: o.width, reverse=not ascending)
-            elif cleaned_attr == "height":
-                sorted_objs = sorted(input_objs, key=lambda o: o.height, reverse=not ascending)
-            elif cleaned_attr == "volume":
-                sorted_objs = sorted(input_objs, key=lambda o: o.volume, reverse=not ascending)
-            else:
-                # Fallback: dynamic accessor
-                sorted_objs = sorted(
-                    input_objs,
-                    key=lambda o: o.dataValue(cleaned_attr),
-                    reverse=not ascending
-                )
-
-        except Exception as e:
-            self.error = f"Sort evaluation error for attribute '{attribute}': {str(e)}"
+        # 1) relation‐based sort?
+        if "." in attribute:
+            self.sort_by_relation(attribute)
             return
-
-        # Convert sorted objects back to their indices
+        
+        parts = attribute.split()
+        name = parts[0].strip()
+        ascending = (len(parts) > 1 and parts[1] == "<")
+        
+        input_objs = [self.fact.objects[i] for i in self.input]
+        
+        key_funcs = {
+            "width":      lambda o: o.width,
+            "height":     lambda o: o.height,
+            "depth":      lambda o: o.depth,
+            "length":     lambda o: o.length,
+            "angle":      lambda o: o.angle,
+            "yaw":        lambda o: o.yaw,
+            "azimuth":    lambda o: o.azimuth,
+            "footprint":  lambda o: o.footprint,
+            "frontface":  lambda o: o.frontface,
+            "sideface":   lambda o: o.sideface,
+            "surface":    lambda o: o.surface,
+            "volume":     lambda o: o.volume,
+            "perimeter":  lambda o: o.perimeter,
+            "baseradius": lambda o: o.baseradius,
+            "radius":     lambda o: o.radius,
+            "speed":      lambda o: o.speed,
+            "confidence": lambda o: o.confidence.spatial,
+            "lifespan":   lambda o: o.lifespan,
+        }
+        
+        key_fn = key_funcs.get(name, lambda o: o.dataValue(name))
+        sorted_objs = sorted(input_objs, key=key_fn, reverse=not ascending)
+        
         self.output = []
         for obj in sorted_objs:
-            idx = self.fact.objects.index(obj)
-            self.add(idx)
-
+            try:
+                idx = self.fact.objects.index(obj)
+                self.add(idx)
+            except ValueError:
+                # object not found in master list? skip it
+                pass
+        
         self.succeeded = bool(self.output)
 
     def slice(self, range_str: str):
@@ -361,6 +423,7 @@ class SpatialInference:
         E.g. produce("group"), produce("copy"), produce("by"), etc.
         You can also handle 'produce("group: color='blue'")' for assignment.
         """
+        from .SpatialObject import SpatialObject
         # Example: "group: color='blue'; label='Cluster'"
         parts = [part.strip() for part in terms.split(":")]
         rule = parts[0]
@@ -370,6 +433,7 @@ class SpatialInference:
         new_objects: List[Dict[str, Any]] = []
         base_objs = self.fact.base.get("objects", [])
 
+        allowed_rules = ["group", "aggregate", "copy", "duplicate", "by", "on", "at"]
         if rule in ("group", "aggregate"):
             # Simple example: Combine bounding extents of input objects into one "group" object.
             input_objs = [self.fact.objects[i] for i in self.input]
@@ -413,7 +477,7 @@ class SpatialInference:
             if obj_idx is not None:
                 group_obj = self.fact.objects[obj_idx]
             else:
-                from .SpatialObject import SpatialObject
+                
                 group_obj = SpatialObject(id=group_id)
                 self.fact.objects.append(group_obj)
                 new_indices.append(len(self.fact.objects)-1)
@@ -455,38 +519,168 @@ class SpatialInference:
 
         elif rule == "by":
             # Example: produce bridging objects by "by" relationships
-            processed = set()
+            processedBy = set()
             for i in self.input:
                 rels = self.fact.relations_with(i, predicate="by")
                 for rel in rels:
                     subj_id = rel.subject.id
                     subj_idx = self.fact.index_of_id(subj_id)
-                    if subj_idx is not None and subj_idx in self.input:
-                        key = f"{self.fact.objects[i].id}-{subj_id}"
-                        if key not in processed:
-                            # Build bridging object
-                            by_id = f"by:{self.fact.objects[i].id}-{subj_id}"
-                            if self.fact.index_of_id(by_id) is not None:
-                                # Already exists
-                                continue
-                            from .SpatialObject import SpatialObject
-                            new_obj = SpatialObject(id=by_id)
-                            new_obj.cause = "rule_produced"
-                            # Very naive placement:
-                            new_obj.set_position(self.fact.objects[i].position)
-                            new_obj.width = max(rel.delta, self.fact.adjustment.maxGap)
-                            new_obj.height = self.fact.objects[i].height
-                            new_obj.depth = max(rel.delta, self.fact.adjustment.maxGap)
+                    
+                    key = f"{subj_id}-{self.fact.objects[i].id}"
+                    key_in_set = key in processedBy
+                    if (subj_idx is not None) and (subj_idx in self.input) and (not key_in_set):
+                        nearest = self.fact.objects[i].pos.nearest(rel.subject.points())
+                        by_id = f"by:{subj_id}-{self.fact.objects[i].id}"
+                        objIdx = self.fact.index_of_id(by_id) 
+                        objIdx = objIdx if objIdx is not None else -1
+                        spatial_object = self.fact.objects[objIdx] if objIdx >= 0 else SpatialObject(id=by_id)
+                        spatial_object.cause = ObjectCause.rule_produced
+                        spatial_object.existence = SpatialExistence.conceptual
+                        spatial_object.setPosition(nearest[0])
+                        spatial_object.angle = self.fact.objects[i].angle
+                        w = max(rel.delta, self.fact.adjustment.maxGap)
+                        spatial_object.width = w
+                        spatial_object.depth = w
+                        h = rel.subject.height
+                        if nearest[0].x == nearest[1].x and nearest[0].z == nearest[1].z:
+                            h = float(nearest[1].y - nearest[0].y)
+                        spatial_object.height = h
+                        
+                        if objIdx >= 0:
+                            new_objects.append(spatial_object.asDict())
+                            new_indices.append(len(self.fact.objects))
+                            self.fact.changes.append(spatial_object)
+                        else:
+                            new_indices.append(objIdx)
+                        processedBy.add(f"{self.fact.objects[i].id}-{rel.subject.id}")
 
-                            self.fact.objects.append(new_obj)
-                            new_indices.append(len(self.fact.objects) - 1)
-                            new_objects.append(new_obj.asDict())
-                            processed.add(key)
-
+        elif rule == "on":
+            for i in self.input:
+                rels = self.fact.relations_with(i, predicate="on")
+                for rel in rels:
+                    onId = f"on:{rel.subject.id}-{rel.object.id}"
+                    objIdx = self.fact.index_of_id(by_id) 
+                    objIdx = objIdx if objIdx is not None else -1
+                    obj = self.fact.objects[objIdx] if objIdx >= 0 else SpatialObject(id=onId)
+                    obj.cause = ObjectCause.rule_produced
+                    obj.existence = SpatialExistence.conceptual
+                    h = max(rel.delta, self.fact.adjustment.maxGap)
+                    obj.height = h
+                    pos = rel.subject.pos
+                    pos.y = pos.y - h / 2.0
+                    obj.setPosition(pos)
+                    obj.angle = rel.subject.angle
+                    obj.width = rel.subject.width
+                    obj.depth = rel.subject.depth
+                    if objIdx < 0:
+                        new_objects.append(obj.asDict())
+                        new_indices.append(len(self.fact.objects))
+                        self.fact.changes.append(len(self.fact.objects))
+                        self.fact.objects.append(obj)
+                    else:
+                        new_indices.append(objIdx)
+        elif rule == "at":
+            for i in self.input:
+                rels = self.fact.relations_with(i, predicate="at")
+                for rel in rels:
+                    atId = f"at:{rel.subject.id}-{rel.object.id}"
+                    objIdx = self.fact.index_of_id(by_id) 
+                    objIdx = objIdx if objIdx is not None else -1
+                    obj = self.fact.objects[objIdx] if objIdx >= 0 else SpatialObject(id=atId)
+                    obj.cause = ObjectCause.rule_produced
+                    obj.existence = SpatialExistence.conceptual
+                    pos = rel.subject.pos
+                    shift = Vector2(0,0)
+                    w = rel.subject.width
+                    h = rel.subject.height
+                    d = max(rel.delta, self.fact.adjustment.maxGap)
+                    meetingIdx = self.fact.index_of_id(rel.subject.id)
+                    meetingIdx = meetingIdx if meetingIdx is not None else -1
+                    if self.fact.does(subject=rel.object, have="ahead", with_obj_idx=meetingIdx):
+                        shift.x =(rel.subject.depth + d) / 2.0
+                        shift = shift.rotate(rel.subject.angle + math.pi/2.0)
+                        obj.angle = rel.subject.angle 
+                    elif self.fact.does(subject=rel.object, have="behind", with_obj_idx=meetingIdx):
+                        shift.x = (rel.subject.depth + d) / 2.0
+                        shift = shift.rotate(rel.subject.angle + math.pi/2.0)
+                        obj.angle = rel.subject.angle
+                    elif self.fact.does(subject=rel.object, have="left", with_obj_idx=meetingIdx):
+                        shift.x = (rel.subject.width + d) / 2.0
+                        shift = shift.rotate(rel.subject.angle + math.pi)
+                        w = rel.subject.depth
+                        obj.angle = rel.subject.angle + math.pi/2.0
+                    elif self.fact.does(subject=rel.object, have="right", with_obj_idx=meetingIdx):
+                        shift.x = (rel.subject.width + d) / 2.0
+                        shift = shift.rotate(rel.subject.angle + math.pi)
+                        w = rel.subject.depth
+                        obj.angle = rel.subject.angle - math.pi/2.0
+                        
+                    pos.x = pos.x + shift.x
+                    pos.z = pos.z + shift.y
+                    obj.setPosition(pos)
+                    obj.width = w
+                    obj.depth = d
+                    obj.height = h
+                    if objIdx < 0:
+                        new_objects.append(obj.asDict())
+                        new_indices.append(len(self.fact.objects))
+                        self.fact.changes.append(len(self.fact.objects))
+                        self.fact.objects.append(obj)
+                    else:
+                        new_indices.append(objIdx)
         else:
-            self.error = f"Unknown rule '{rule}' in produce()"
-            return
+            pred = SpatialPredicate.named(rule)
+            if  pred == SpatialPredicate.undefined:
+                self.error = f"Unknown rule '{rule}' in produce()"
+                return
+            if pred in SpatialPredicate.sectors:
+                sector = BBoxSector.named(rule)
+                for i in self.input:
+                    sectorID = f"{rule}:{self.fact.objects[i].id}"
+                    objIdx = self.fact.index_of_id(sectorID)
+                    objIdx = objIdx if objIdx is not None else -1
+                    obj = self.fact.objects[objIdx] if objIdx >= 0 else SpatialObject(id=sectorID)
+                    obj.cause = ObjectCause.rule_produced
+                    obj.existence = SpatialExistence.conceptual
+                    dims = self.fact.objects[i].sector_lengths(sector=sector)
+                    obj.width = dims.x
+                    obj.height = dims.y
+                    obj.depth = dims.z
+                    shift = Vector3(0,0,0)
+                    # Y‐shift: over / under
+                    if BBoxSectorFlags.o in sector:
+                        shift.y = (float(self.fact.objects[i].height) + dims.y) / 2.0
+                    elif BBoxSectorFlags.u in sector:
+                        shift.y = (float(-self.fact.objects[i].height) - dims.y) / 2.0
 
+                    # X‐shift: right / left
+                    if BBoxSectorFlags.r in sector:
+                        shift.x = (float(-self.fact.objects[i].width) - dims.x) / 2.0
+                    elif BBoxSectorFlags.l in sector:
+                        shift.x = (float(self.fact.objects[i].width) + dims.x) / 2.0
+
+                    # Z‐shift: ahead / behind
+                    if BBoxSectorFlags.a in sector:
+                        shift.z = (float(self.fact.objects[i].depth) + dims.z) / 2.0
+                    elif BBoxSectorFlags.b in sector:
+                        shift.z = (float(-self.fact.objects[i].depth) - dims.z) / 2.0
+                
+                    obj.angle = self.fact.objects[i].angle
+                    vector = Vector2(shift.x, -shift.z)
+                    vector = vector.rotate(self.fact.objects[i].angle)
+                    shift.x = vector.x
+                    shift.z = -vector.y
+                    center = self.fact.objects[i].center
+                    obj.setCenter(center + shift)
+                    if objIdx < 0:
+                        new_objects.append(obj.asDict())
+                        new_indices.append(len(self.fact.objects))
+                        self.fact.changes.append(len(self.fact.objects))
+                        self.fact.objects.append(obj)
+                    else:
+                        new_indices.append(objIdx)
+                    
+                    
         # If any new objects were created, add them to base
         if new_objects:
             base_objs.extend(new_objects)
@@ -613,16 +807,28 @@ class SpatialInference:
     # ----------------------------------------------------------------------
     #                            UTILITY METHODS
     # ----------------------------------------------------------------------
+    def backtrace(self, term):
+        """
+        Replace self.output with fact.backtrace(N), where N is parsed
+        from term (string or int). Defaults to 1 if parse fails.
+        """
+        try:
+            steps = int(term)
+        except (ValueError, TypeError):
+            steps = 1
 
+        self.output = self.fact.backtrace(abs(steps))
+        self.succeeded = bool(self.output)
+    
     def has_failed(self) -> bool:
-        return bool(self.error)
+        return len(self.error) > 0
 
     def is_manipulating(self) -> bool:
         """
         Return True if this operation changes or filters the set of objects in a non-trivial way.
         Used in backtrace logic, for example.
         """
-        ops = ["filter", "pick", "select", "produce", "slice", "map"]
+        ops = ["filter", "pick", "select", "isa", "produce", "slice", "map", "reload", "sort"]
         return any(self.operation.startswith(op + "(") for op in ops)
 
     def asDict(self) -> Dict[str, Any]:

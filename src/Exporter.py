@@ -31,9 +31,9 @@ class SceneExporter:
         self.usd_file_path = None
         timestamp = datetime.datetime.now().microsecond
         self.temp_usd_path = os.path.join(self.root_dir, f"temp_scene_{timestamp}.usd")
-        print("*"*100)
+
         print(self.temp_usd_path)
-        print("*"*100)
+       
         self.stage = None
 
     def exportUSDZ(self, spatial_objects: List[SpatialObject], filename: str) -> None:
@@ -48,6 +48,7 @@ class SceneExporter:
         
         :param spatial_objects: A list of SpatialObject instances.
         :param filename: The final USDZ file name (including path).
+        #TODO: Verify the transformations on the nodes and children..There might be something wrong with the ordering
         """
         # Delete existing USD files if they exist.
         self.usd_file_path = os.path.join(self.root_dir, filename)
@@ -103,11 +104,13 @@ class SceneExporter:
         # Define a unique prim path for the object.
         prim_path = f"/{spatial_object.id}"
         
-        # Create a transform node for the spatial object.
+        
         xform = UsdGeom.Xform.Define(self.stage, prim_path)
+        #1st step rotate around y-axis according to the angle of the Spatial Object
         xform.AddRotateYOp().Set(
                 math.degrees(spatial_object.angle)
         )
+        #2nd step translate the object to its position
         xform.AddTranslateOp().Set(
             Gf.Vec3d(
                 spatial_object.position.x,

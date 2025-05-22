@@ -59,6 +59,17 @@ class Vector3:
         rotated = rotation_matrix.dot(self.array)
         return Vector3(*rotated)
     
+    def nearest(self, others):
+        """
+        Return the list of Vector3 objects sorted by increasing distance
+        from self, so the first element is the nearest point.
+        """
+        # key is the Euclidean distance from self to other
+        return sorted(
+            others,
+            key=lambda other: np.linalg.norm(self.array - other.array)
+        )
+    
     def __eq__(self, other):
         if not isinstance(other, Vector3):
             return False

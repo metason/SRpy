@@ -200,6 +200,25 @@ class BBoxSector:
         """
         return f"BBoxSector(flags={self.flags})"
 
+    def __hash__(self) -> int:
+        """
+        Make BBoxSector hashable (so you can use it in sets/dicts),
+        just like Swift’s Hashable conformance.
+        """
+        return hash(self.flags)
+
+    @classmethod
+    def named(cls, name: str) -> 'BBoxSector':
+        """
+        Look up a sector by its name (e.g. "alo", "b", "ru").
+        Returns BBoxSector.none if no match found.
+        """
+        for flag, desc in cls.debug_descriptions.items():
+            if desc == name:
+                return cls(flag)
+        return cls()  
+    
+
     def __or__(self, other: Any) -> 'BBoxSector':
         """
         Define the behavior of the | operator.

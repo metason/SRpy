@@ -1649,6 +1649,22 @@ class SpatialObject:
         # If all computed zones show the inside flag, add an 'inside' relation.
         result = self._check_Assembly(subject=subject, result=result,aligned=aligned,can_not_overlap=can_not_overlap)
         
+        
+        interactive_preds = {
+            SpatialPredicate.inside, SpatialPredicate.in_,
+            SpatialPredicate.containing, SpatialPredicate.overlapping,
+            SpatialPredicate.crossing, SpatialPredicate.touching,
+            SpatialPredicate.by,       SpatialPredicate.on,
+            SpatialPredicate.at,       SpatialPredicate.meeting
+        }
+        if can_not_overlap and not any(r.predicate in interactive_preds for r in result):
+            result.append(SpatialRelation(
+                subject=subject,
+                predicate=SpatialPredicate.disjoint,
+                object=self,
+                delta=center_distance,
+                angle=theta
+            ))
         # === 6. Orientation Deduction ===
         result = self._deduce_orientation(subject=subject, result=result)
 
@@ -2107,35 +2123,24 @@ class SpatialObject:
         Returns:
             float: The requested relation value, or 0.0 if not found or invalid.
         """
-        # Split the input string into predicate and attribute parts.
-        list_split = [part.strip() for part in relval.split(".")]
-        if len(list_split) != 2 or self.context is None:
+        parts = [p.strip() for p in relval.split(".")]
+        if len(parts) != 2 or self.context is None:
             return 0.0
 
-        requested_predicate = list_split[0]  # e.g., "far" or "near"
-        requested_attribute = list_split[1]  # e.g., "delta" or "angle"
-        result_val: float = 0.0
+        requested_predicate, requested_attribute = parts
+        result_val = 0.0
 
         for i in pre:
-            if self.context:
-                # Retrieve relations for the given index and predicate.
-                # (Note: Make sure that your context’s relationsWith() method
-                #  filters on the predicate correctly, or else you need to check it here.)
-                rels = self.context.relationsWith(i, predicate=requested_predicate)
-                for rel in rels:
-                    # Only use the relation if it both belongs to self and
-                    # its predicate matches the requested predicate.
-                    if rel.subject == self and rel.predicate.value == requested_predicate:
-                        if requested_attribute == "angle":
-                            result_val = rel.angle
-                        elif requested_attribute == "delta":
-                            result_val = rel.delta
-                        else:
-                            # Unknown attribute; return 0.0 per test expectations.
-                            result_val = 0.0
-                        # If a matching relation is found, you can break out early.
-                        return result_val
-
+            rels = self.context.relations_with(i, predicate=requested_predicate)
+            for rel in rels:
+                # only consider relations with the right predicate and subject=self
+                if rel.subject is self and rel.predicate.value == requested_predicate:
+                    if requested_attribute == "angle":
+                        result_val = rel.angle
+                    elif requested_attribute == "delta":
+                        result_val = rel.delta
+                    # for anything else, do not set result_val
+                    # (thus invalid attributes yield 0.0)
         return result_val
 
     
