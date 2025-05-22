@@ -1670,9 +1670,14 @@ class SpatialObject:
 
         # === 7. Visibility Deduction (Clock Angle Predicates) ===
         result = self._deduce_visibility(subject=subject, result=result)
+        
+        unique = {}
+        for rel in result:
+            key = (rel.subject, rel.predicate, rel.object)
+            if key not in unique:
+                unique[key] = rel
 
-        return result
-
+        return list(unique.values())
 
     # Similarities Method
     def similarities(self, subject: 'SpatialObject') -> List['SpatialRelation']:
