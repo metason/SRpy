@@ -228,10 +228,17 @@ class TestSpatialReasoningQueries(unittest.TestCase):
         observer.angle = math.pi + 0.24
         sr = SpatialReasoner()
         sr.load([obj, subject1, subject2, subject3, observer])
+        
         pipeline = (
-            "deduce(topology) | filter(id == 'ego') | pick(disjoint) | sort(disjoint.delta <) | slice(1) | log(base 3D disjoint)"
-        )
+                "deduce(topology) "
+                "| filter(id == 'ego') "
+                "| pick(disjoint) "
+                "| sort(disjoint.delta <) "
+                "| slice(1) "
+                "| log(base 3D disjoint)"
+            )
         done = sr.run(pipeline)
+        
         self.assertTrue(done)
 
     def test_calc(self):

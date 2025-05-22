@@ -732,7 +732,7 @@ class TestSpatialObjectRelationValue(unittest.TestCase):
             delta=1.414,
             angle=math.pi / 2
         )
-        self.obj1.context.relationsWith.return_value = [relation]
+        self.obj1.context.relations_with.return_value = [relation]
 
     def test_relation_value_angle(self):
         value = self.obj1.relationValue("near.angle", [0])
