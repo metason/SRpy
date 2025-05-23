@@ -1,6 +1,8 @@
 from threading import Thread
 from typing import List, Optional
-from xml.etree.ElementTree import XMLParser
+import xml.etree.ElementTree as ET, XMLParser
+from threading import Thread
+from typing import List, Optional
 
 class SpatialObjectConcept:
     
@@ -185,8 +187,13 @@ class SpatialTaxonomy:
                 return c
 
         if not precise and len(query) > 2:
+            q = query.lower()
             for c in reversed(cls.concepts):
-                if query.lower() in c.label.lower():
+                # match in the label…
+                if q in c.label.lower():
+                    return c
+                # …or in any synonym
+                if any(q in syn.lower() for syn in (c.synonyms or [])):
                     return c
         return None
 
