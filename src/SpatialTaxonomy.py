@@ -1,6 +1,6 @@
 from threading import Thread
 from typing import List, Optional
-import xml.etree.ElementTree as ET, XMLParser
+import xml.etree.ElementTree as ET
 from threading import Thread
 from typing import List, Optional
 
