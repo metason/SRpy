@@ -5,11 +5,11 @@ from typing import Dict
 
 # Calculation schema to determine nearby radius
 class NearbySchema(Enum):
-    fixed = "fixed"      # use nearbyFactor as fix nearby radius
-    circle = "circle"    # use base circle radius of bbox multiplied with nearbyFactor
-    sphere = "sphere"    # use sphere radius of bbox multiplied with nearbyFactor
+    fixed = "fixed"  # use nearbyFactor as fix nearby radius
+    circle = "circle"  # use base circle radius of bbox multiplied with nearbyFactor
+    sphere = "sphere"  # use sphere radius of bbox multiplied with nearbyFactor
     perimeter = "perimeter"  # use base perimeter multiplied with nearbyFactor
-    area = "area"        # use area multiplied with nearbyFactor
+    area = "area"  # use area multiplied with nearbyFactor
 
     @staticmethod
     def named(name: str):
@@ -18,11 +18,13 @@ class NearbySchema(Enum):
 
 # Calculation schema to determine sector size for extruding bbox area
 class SectorSchema(Enum):
-    fixed = "fixed"      # use sectorFactor as fix sector length for extruding area
-    dimension = "dimension"  # use same dimension as object bbox multiplied with sectorFactor
+    fixed = "fixed"  # use sectorFactor as fix sector length for extruding area
+    dimension = (
+        "dimension"  # use same dimension as object bbox multiplied with sectorFactor
+    )
     perimeter = "perimeter"  # use base perimeter multiplied with sectorFactor
-    area = "area"        # use area multiplied with sectorFactor
-    nearby = "nearby"    # use nearby settings of spatial adjustment for extruding
+    area = "area"  # use area multiplied with sectorFactor
+    nearby = "nearby"  # use nearby settings of spatial adjustment for extruding
 
     @staticmethod
     def named(name: str):
@@ -41,25 +43,35 @@ class SpatialAdjustment:
         sector_limit: float = 2.5,
         nearby_schema: NearbySchema = NearbySchema.circle,
         nearby_factor: float = 2.0,
-        nearby_limit: float = 2.5
+        nearby_limit: float = 2.5,
     ):
         # Max deviations
-        self.maxGap: float = maxGap  # max distance of deviation in all directions in meters
-        self.maxAngleDelta: float = angle  # max angle delta in both directions in radians
+        self.maxGap: float = (
+            maxGap  # max distance of deviation in all directions in meters
+        )
+        self.maxAngleDelta: float = (
+            angle  # max angle delta in both directions in radians
+        )
 
         # Sector size
         self.sectorSchema: SectorSchema = sector_schema
-        self.sectorFactor: float = sector_factor  # multiplying result of calculation schema
+        self.sectorFactor: float = (
+            sector_factor  # multiplying result of calculation schema
+        )
         self.sectorLimit: float = sector_limit  # maximal length
 
         # Vicinity
         self.nearbySchema: NearbySchema = nearby_schema
-        self.nearbyFactor: float = nearby_factor  # multiplying radius sum of object and subject (relative to size) as max distance
+        self.nearbyFactor: float = (
+            nearby_factor  # multiplying radius sum of object and subject (relative to size) as max distance
+        )
         self.nearbyLimit: float = nearby_limit  # maximal absolute distance
 
         # Proportions
         self.longRatio: float = 4.0  # one dimension is factor larger than both others
-        self.thinRatio: float = 10.0  # one dimension is 1/factor smaller than both others
+        self.thinRatio: float = (
+            10.0  # one dimension is 1/factor smaller than both others
+        )
 
     @property
     def yaw(self) -> float:
@@ -73,7 +85,9 @@ class SpatialAdjustment:
 
 # Default adjustment only used when no SpatialReasoner builds context
 defaultAdjustment = SpatialAdjustment()
-tightAdjustment = SpatialAdjustment(maxGap=0.002, angle=0.01 * math.pi, sector_factor=0.5)
+tightAdjustment = SpatialAdjustment(
+    maxGap=0.002, angle=0.01 * math.pi, sector_factor=0.5
+)
 
 
 class SpatialPredicateCategories:
@@ -89,14 +103,17 @@ class SpatialPredicateCategories:
         self.contacts: bool = False
 
 
-
 class ObjectConfidence:
     """Plausibility values between 0.0 and 1.0"""
 
     def __init__(self):
-        self.pose: float = 0.0  # plausibility of position and orientation of (partially) detected part
+        self.pose: float = (
+            0.0  # plausibility of position and orientation of (partially) detected part
+        )
         self.dimension: float = 0.0  # plausibility of size of spatial object
-        self.label: float = 0.0  # plausibility of classification: label, type, supertype
+        self.label: float = (
+            0.0  # plausibility of classification: label, type, supertype
+        )
         self.look: float = 0.0  # plausibility of look and shape
 
     @property
@@ -107,6 +124,7 @@ class ObjectConfidence:
         self.pose = value
         self.dimension = value
         self.label = value
+
     @property
     def spatial(self) -> float:
         return (self.pose + self.dimension) / 2.0
@@ -120,7 +138,7 @@ class ObjectConfidence:
             "pose": self.pose,
             "dimension": self.dimension,
             "label": self.label,
-            "look": self.look
+            "look": self.look,
         }
 
 
@@ -156,7 +174,11 @@ class SpatialExistence(Enum):
 
     @staticmethod
     def named(name: str):
-        return SpatialExistence(name) if name in SpatialExistence.__members__ else SpatialExistence.undefined
+        return (
+            SpatialExistence(name)
+            if name in SpatialExistence.__members__
+            else SpatialExistence.undefined
+        )
 
 
 class ObjectCause(Enum):
@@ -171,7 +193,11 @@ class ObjectCause(Enum):
 
     @staticmethod
     def named(name: str):
-        return ObjectCause(name) if name in ObjectCause.__members__ else ObjectCause.unknown
+        return (
+            ObjectCause(name)
+            if name in ObjectCause.__members__
+            else ObjectCause.unknown
+        )
 
 
 class MotionState(Enum):
@@ -193,7 +219,11 @@ class ObjectShape(Enum):
 
     @staticmethod
     def named(name: str):
-        return ObjectShape(name) if name in ObjectShape.__members__ else ObjectShape.unknown
+        return (
+            ObjectShape(name)
+            if name in ObjectShape.__members__
+            else ObjectShape.unknown
+        )
 
 
 # TODO: operable?
@@ -213,10 +243,14 @@ if __name__ == "__main__":
     # SpatialAdjustment example
     adjustment = SpatialAdjustment()
     print(f"Default Adjustment Max Gap: {adjustment.maxGap}")  # Output: 0.02
-    print(f"Default Adjustment Yaw: {adjustment.yaw} degrees")  # Output: ~2.864788975654116 degrees
+    print(
+        f"Default Adjustment Yaw: {adjustment.yaw} degrees"
+    )  # Output: ~2.864788975654116 degrees
 
     adjustment.setYaw(10.0)
-    print(f"Updated Adjustment Max Angle Delta: {adjustment.maxAngleDelta} radians")  # Output: ~0.17453292519943295 radians
+    print(
+        f"Updated Adjustment Max Angle Delta: {adjustment.maxAngleDelta} radians"
+    )  # Output: ~0.17453292519943295 radians
 
     # ObjectConfidence example
     confidence = ObjectConfidence()
@@ -224,9 +258,15 @@ if __name__ == "__main__":
     confidence.dimension = 0.7
     confidence.label = 0.9
     confidence.look = 0.6
-    print(f"Object Confidence Value: {confidence.value}")  # Output: (0.8 + 0.7 + 0.9) / 3 = 0.8
-    print(f"Object Confidence Spatial: {confidence.spatial}")  # Output: (0.8 + 0.7) / 2 = 0.75
-    print(f"Object Confidence as Dictionary: {confidence.asDict()}")  # Output: {'pose': 0.8, 'dimension': 0.7, 'label': 0.9, 'look': 0.6}
+    print(
+        f"Object Confidence Value: {confidence.value}"
+    )  # Output: (0.8 + 0.7 + 0.9) / 3 = 0.8
+    print(
+        f"Object Confidence Spatial: {confidence.spatial}"
+    )  # Output: (0.8 + 0.7) / 2 = 0.75
+    print(
+        f"Object Confidence as Dictionary: {confidence.asDict()}"
+    )  # Output: {'pose': 0.8, 'dimension': 0.7, 'label': 0.9, 'look': 0.6}
 
     # Enum usage example
     schema = NearbySchema.circle
