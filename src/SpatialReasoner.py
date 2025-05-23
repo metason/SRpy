@@ -2,41 +2,16 @@ import datetime
 from typing import List, Dict, Optional, Any
 from pathlib import Path
 import json
-
-# Import the SpatialObject and dependencies
-from src.Vector3 import Vector3
+import copy
 from src.Vector2 import Vector2
 from src.SpatialBasics import (
-    NearbySchema,
-    SectorSchema,
     SpatialAdjustment,
     SpatialPredicateCategories,
-    ObjectConfidence,
-    SpatialAtribute,
-    SpatialExistence,
-    ObjectCause,
-    MotionState,
-    ObjectShape,
-    ObjectHandling,
-    defaultAdjustment
 )
 from src.SpatialPredicate import (
     SpatialPredicate,
-    PredicateTerm,
     SpatialTerms,
-    proximity,
-    directionality,
-    adjacency,
-    orientations,
-    assembly,
-    topology,
-    contacts,
-    connectivity,
-    comparability,
-    similarity,
-    visibility,
-    geography,
-    sectors,
+    connectivity
 )
 from .SpatialObject import SpatialObject
 from .SpatialRelation import SpatialRelation
@@ -55,8 +30,12 @@ class SpatialReasoner:
         self.observer: Optional[SpatialObject] = None
         self.relMap: Dict[int, List[SpatialRelation]] = {}  # index: [SpatialRelation]
         self.chain: List[SpatialInference] = []
-        self.base: Dict[str, Any] = {}  # Fact base for read/write access of expression evaluation
-        self.snapTime: datetime.datetime = datetime.datetime.now()  # Load or update time of fact base
+        self.base: Dict[str, Any] = (
+            {}
+        )  # Fact base for read/write access of expression evaluation
+        self.snapTime: datetime.datetime = (
+            datetime.datetime.now()
+        )  # Load or update time of fact base
 
         # === Logging ===
         self.pipeline: str = ""  # Last used inference pipeline
@@ -155,13 +134,13 @@ class SpatialReasoner:
         """
         Take a snapshot of the current fact base.
         """
-        return self.base.copy()
+        return copy.deepcopy(self.base)
 
     def load_snapshot(self, snapshot: Dict[str, Any]):
         """
         Load a snapshot into the fact base.
         """
-        self.base = snapshot.copy()
+        self.base = copy.deepcopy(snapshot)
         self.sync_to_objects()
 
     # === Recording and Backtracing ===
@@ -188,7 +167,7 @@ class SpatialReasoner:
                     # return a copy to avoid downstream mutation
                     return list(inference.input)
         return []
-    
+
     # === Running the Inference Pipeline ===
 
     def run(self, pipeline: str) -> bool:
@@ -223,10 +202,8 @@ class SpatialReasoner:
             else:
                 input_chain = self.chain[-1].output if self.chain else indices
                 inference = SpatialInference(
-                        input_indices=input_chain,
-                        operation=op,
-                        fact=self
-                    )
+                    input_indices=input_chain, operation=op, fact=self
+                )
                 self.record(inference)
                 if inference.has_failed():
                     print("Inference Error:", inference.error)
@@ -238,8 +215,9 @@ class SpatialReasoner:
         if self.chain:
             return self.chain[-1].succeeded
         # if the only operations were deduce(...) or log(...), consider it a success
-        if any(op.startswith("deduce(") for op in operations) \
-           or any(op.startswith("log(") for op in operations):
+        if any(op.startswith("deduce(") for op in operations) or any(
+            op.startswith("log(") for op in operations
+        ):
             return True
         return False
 
@@ -269,7 +247,9 @@ class SpatialReasoner:
         Print a list of SpatialRelations in a readable format.
         """
         for relation in relations:
-            print(f"{relation.subject.id} {relation.predicate} {relation.object.id} | Δ:{relation.delta:.2f}  α:{relation.yaw:.1f}°")
+            print(
+                f"{relation.subject.id} {relation.predicate} {relation.object.id} | Δ:{relation.delta:.2f}  α:{relation.yaw:.1f}°"
+            )
 
     def relations_of(self, idx: int) -> List[SpatialRelation]:
         """
@@ -424,7 +404,9 @@ class SpatialReasoner:
 
         if error:
             print(f"Error: {error}")
-            error_state = SpatialInference(input=[], operation=f"adjust({settings})", reasoner=self)
+            error_state = SpatialInference(
+                input_indices=[], operation=f"adjust({settings})", fact=self
+            )
             error_state.error = error
             return False
         return True
@@ -471,8 +453,8 @@ class SpatialReasoner:
             self.log_base()
         if "3D" in toks:
             toks.remove("3D")
-            #pass
-            #self.log_3D()   # assume you’ve implemented this stub in Python
+            # pass
+            # self.log_3D()   # assume you’ve implemented this stub in Python
 
         # --- 4) start building Markdown ---
         md = "# " + (self.name or "Spatial Reasoning Log") + "\n"
@@ -578,125 +560,126 @@ class SpatialReasoner:
         Print a list of SpatialRelations in a readable format.
         """
         for relation in relations:
-            print(f"{relation.subject.id} {relation.predicate} {relation.object.id} | Δ:{relation.delta:.2f}  α:{relation.yaw:.1f}°")
-            
-            
+            print(
+                f"{relation.subject.id} {relation.predicate} {relation.object.id} | Δ:{relation.delta:.2f}  α:{relation.yaw:.1f}°"
+            )
+
     def log(self, predicates: str):
-            """
-            Log the specified predicates to a Markdown file, exactly as in the Swift version.
-            """
-            # --- 1) initialize log folder ---
-            if self.logFolder is None:
-                downloads = Path.home() / "Downloads"
-                if downloads.exists():
-                    self.logFolder = downloads
-                else:
-                    self.logFolder = Path.home()
-
-            # --- 2) bump counter & pick indices ---
-            self.logCnt += 1
-            all_indices = list(range(len(self.objects)))
-            if self.chain:
-                indices = self.chain[-1].output
+        """
+        Log the specified predicates to a Markdown file, exactly as in the Swift version.
+        """
+        # --- 1) initialize log folder ---
+        if self.logFolder is None:
+            downloads = Path.home() / "Downloads"
+            if downloads.exists():
+                self.logFolder = downloads
             else:
-                indices = all_indices
+                self.logFolder = Path.home()
 
-            # --- 3) split out "base" and "3D" tokens ---
-            toks = [t.strip() for t in predicates.split()]
-            if "base" in toks:
-                toks.remove("base")
-                self.log_base()
-            if "3D" in toks:
-                toks.remove("3D")
-                self.log_3D()   # assume you’ve implemented this stub in Python
+        # --- 2) bump counter & pick indices ---
+        self.logCnt += 1
+        all_indices = list(range(len(self.objects)))
+        if self.chain:
+            indices = self.chain[-1].output
+        else:
+            indices = all_indices
 
-            # --- 4) start building Markdown ---
-            md = "# " + (self.name or "Spatial Reasoning Log") + "\n"
-            if self.description:
-                md += self.description
-            md += "\n\n"
+        # --- 3) split out "base" and "3D" tokens ---
+        toks = [t.strip() for t in predicates.split()]
+        if "base" in toks:
+            toks.remove("base")
+            self.log_base()
+        if "3D" in toks:
+            toks.remove("3D")
+            self.log_3D()  # assume you’ve implemented this stub in Python
 
-            # pipeline block
-            md += "## Inference Pipeline\n\n```\n"
-            md += self.pipeline + "\n```\n\n"
+        # --- 4) start building Markdown ---
+        md = "# " + (self.name or "Spatial Reasoning Log") + "\n"
+        if self.description:
+            md += self.description
+        md += "\n\n"
 
-            # chain block
-            md += "## Inference Chain\n\n```\n"
-            for i, inf in enumerate(self.chain):
-                if i > 0:
-                    md += "| "
-                md += f"{inf.operation}  ->  {inf.output}\n"
-            md += "```\n\n"
+        # pipeline block
+        md += "## Inference Pipeline\n\n```\n"
+        md += self.pipeline + "\n```\n\n"
 
-            # fact base
-            md += "## Spatial Objects\n\n### Fact Base\n\n"
-            for i in all_indices:
-                obj = self.objects[i]
-                md += f"{i}.  __{obj.id}__: {obj.desc()}\n"
-            md += "\n\n"
+        # chain block
+        md += "## Inference Chain\n\n```\n"
+        for i, inf in enumerate(self.chain):
+            if i > 0:
+                md += "| "
+            md += f"{inf.operation}  ->  {inf.output}\n"
+        md += "```\n\n"
 
-            # resulting objects
-            md += "### Resulting Objects (Output)\n\n"
-            mmd_objs = ""
-            mmd_rels = ""
-            mmd_contacts = ""
-            rels = ""
-            for i in indices:
-                obj = self.objects[i]
-                md += f"{i}.  __{obj.id}__: {obj.desc()}\n"
-                mmd_objs += f"    {obj.id}\n"
+        # fact base
+        md += "## Spatial Objects\n\n### Fact Base\n\n"
+        for i in all_indices:
+            obj = self.objects[i]
+            md += f"{i}.  __{obj.id}__: {obj.desc()}\n"
+        md += "\n\n"
 
-                for relation in self.relations_of(i):
-                    # predicate-filter
-                    include = (not toks) or (relation.predicate.value in toks)
+        # resulting objects
+        md += "### Resulting Objects (Output)\n\n"
+        mmd_objs = ""
+        mmd_rels = ""
+        mmd_contacts = ""
+        rels = ""
+        for i in indices:
+            obj = self.objects[i]
+            md += f"{i}.  __{obj.id}__: {obj.desc()}\n"
+            mmd_objs += f"    {obj.id}\n"
+
+            for relation in self.relations_of(i):
+                # predicate-filter
+                include = (not toks) or (relation.predicate.value in toks)
+                if include:
+                    left_link = " -- "
+                    if SpatialTerms.symmetric(relation.predicate):
+                        left_link = " <-- "
+                        mirror = f"{relation.object.id}{left_link}{relation.predicate.value} --> {relation.subject.id}"
+                        if mirror in mmd_rels:
+                            include = False
                     if include:
-                        left_link = " -- "
-                        if SpatialTerms.symmetric(relation.predicate):
-                            left_link = " <-- "
-                            mirror = f"{relation.object.id}{left_link}{relation.predicate.value} --> {relation.subject.id}"
-                            if mirror in mmd_rels:
-                                include = False
-                        if include:
-                            mmd_rels += f"    {relation.subject.id}{left_link}{relation.predicate.value} --> {relation.object.id}\n"
+                        mmd_rels += f"    {relation.subject.id}{left_link}{relation.predicate.value} --> {relation.object.id}\n"
 
-                    # connectivity graph
-                    print("Connectivity: ", connectivity)
-                    if relation.predicate in connectivity:
-                        do_add = True
-                        left_link = " -- "
-                        if relation.predicate == SpatialPredicate.by:
-                            left_link = " <-- "
-                            mirror = f"{relation.object.id}{left_link}{relation.predicate.value} --> {relation.subject.id}"
-                            if mirror in mmd_contacts:
-                                do_add = False
-                        if do_add:
-                            mmd_contacts += f"    {relation.subject.id}{left_link}{relation.predicate.value} --> {relation.object.id}\n"
+                # connectivity graph
+                print("Connectivity: ", connectivity)
+                if relation.predicate in connectivity:
+                    do_add = True
+                    left_link = " -- "
+                    if relation.predicate == SpatialPredicate.by:
+                        left_link = " <-- "
+                        mirror = f"{relation.object.id}{left_link}{relation.predicate.value} --> {relation.subject.id}"
+                        if mirror in mmd_contacts:
+                            do_add = False
+                    if do_add:
+                        mmd_contacts += f"    {relation.subject.id}{left_link}{relation.predicate.value} --> {relation.object.id}\n"
 
-                    # flat list
-                    rels += f"* {relation.desc()}\n"
+                # flat list
+                rels += f"* {relation.desc()}\n"
 
-            # mermaid spatial-relations graph
-            if mmd_rels:
-                md += "\n## Spatial Relations Graph\n\n"
-                md += "```mermaid\ngraph LR;\n" + mmd_objs + mmd_rels + "```\n"
+        # mermaid spatial-relations graph
+        if mmd_rels:
+            md += "\n## Spatial Relations Graph\n\n"
+            md += "```mermaid\ngraph LR;\n" + mmd_objs + mmd_rels + "```\n"
 
-            # mermaid connectivity graph
-            if mmd_contacts:
-                md += "\n## Connectivity Graph\n\n"
-                md += "```mermaid\ngraph TD;\n" + mmd_contacts + "```\n"
+        # mermaid connectivity graph
+        if mmd_contacts:
+            md += "\n## Connectivity Graph\n\n"
+            md += "```mermaid\ngraph TD;\n" + mmd_contacts + "```\n"
 
-            # detailed list
-            md += "\n## Spatial Relations\n\n" + rels + "\n"
+        # detailed list
+        md += "\n## Spatial Relations\n\n" + rels + "\n"
 
-            # --- 5) write file ---
-            multiple = self.pipeline.count("log(") > 1
-            suffix = str(self.logCnt) if multiple else ""
-            filename = f"log{suffix}.md"
-            path = self.logFolder / filename
-            try:
-                path.write_text(md, encoding="utf-16")
-            except Exception as e:
-                print(f"Error writing log file: {e}")
+        # --- 5) write file ---
+        multiple = self.pipeline.count("log(") > 1
+        suffix = str(self.logCnt) if multiple else ""
+        filename = f"log{suffix}.md"
+        path = Path(self.logFolder) / filename
+        try:
+            path.write_text(md, encoding="utf-16")
+        except Exception as e:
+            print(f"Error writing log file: {e}")
 
     def log_base(self):
         """
@@ -708,8 +691,7 @@ class SpatialReasoner:
                 json.dump(self.base, f, indent=4)
         except Exception as e:
             print(f"Error writing base JSON: {e}")
-            
-            
+
     def log_3D(self):
         """
         Log the 3D representation of the spatial objects.
