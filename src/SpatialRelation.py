@@ -17,11 +17,11 @@ class SpatialRelation:
 
     def __init__(
         self,
-        subject: 'SpatialObject',
+        subject: "SpatialObject",
         predicate: SpatialPredicate,
-        object: 'SpatialObject',
+        object: "SpatialObject",
         delta: float = 0.0,
-        angle: float = 0.0
+        angle: float = 0.0,
     ):
         """
         Initializes a SpatialRelation instance.
@@ -33,9 +33,9 @@ class SpatialRelation:
             delta (float, optional): Difference of predicate value between subject and object, e.g., distance. Defaults to 0.0.
             angle (float, optional): Angle deviation of object direction in radians. Defaults to 0.0.
         """
-        self.subject: 'SpatialObject' = subject
+        self.subject: "SpatialObject" = subject
         self.predicate: SpatialPredicate = predicate
-        self.object: 'SpatialObject' = object
+        self.object: "SpatialObject" = object
         self.delta: float = delta
         self.angle: float = angle
 
