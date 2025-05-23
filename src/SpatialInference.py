@@ -7,41 +7,14 @@ from src.BBoxSector import BBoxSector, BBoxSectorFlags
 from src.Vector2 import Vector2
 from src.Vector3 import Vector3
 from .SpatialObject import SpatialObject
-from typing import Any, Dict, List, Optional
-from .SpatialObject import SpatialObject
+from typing import Any, Dict, List
 from .SpatialTaxonomy import SpatialTaxonomy
-from .SpatialObject import SpatialObject
 from src.SpatialBasics import (
-    NearbySchema,
-    SectorSchema,
-    SpatialAdjustment,
-    SpatialPredicateCategories,
-    ObjectConfidence,
-    SpatialAtribute,
     SpatialExistence,
-    ObjectCause,
-    MotionState,
-    ObjectShape,
-    ObjectHandling,
-    defaultAdjustment
+    ObjectCause
 )
 from src.SpatialPredicate import (
     SpatialPredicate,
-    PredicateTerm,
-    SpatialTerms,
-    proximity,
-    directionality,
-    adjacency,
-    orientations,
-    assembly,
-    topology,
-    contacts,
-    connectivity,
-    comparability,
-    similarity,
-    visibility,
-    geography,
-    sectors,
 )
 
 
@@ -423,7 +396,6 @@ class SpatialInference:
         E.g. produce("group"), produce("copy"), produce("by"), etc.
         You can also handle 'produce("group: color='blue'")' for assignment.
         """
-        from .SpatialObject import SpatialObject
         # Example: "group: color='blue'; label='Cluster'"
         parts = [part.strip() for part in terms.split(":")]
         rule = parts[0]
@@ -509,7 +481,6 @@ class SpatialInference:
                 if self.fact.index_of_id(copy_id) is not None:
                     continue
                 # Otherwise create new
-                from .SpatialObject import SpatialObject
                 copy_obj = SpatialObject(id=copy_id)
                 copy_obj.fromAny(original.asDict())
                 copy_obj.cause = ObjectCause.rule_produced
